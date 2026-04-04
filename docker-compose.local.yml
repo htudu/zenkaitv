@@ -1,0 +1,83 @@
+services:
+  api:
+    build:
+      context: ./api
+    container_name: stream-movies-api-local
+    env_file:
+      - .env.local
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/workspace
+      - ./data:/workspace/data
+      - ./movie_uploads:/workspace/movie_uploads
+      - ./generated_media:/workspace/generated_media
+    depends_on:
+      - redis
+      - minio
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: stream-movies-web-local
+    env_file:
+      - .env.local
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/workspace/web
+      - web_node_modules_local:/workspace/web/node_modules
+    depends_on:
+      - api
+
+  worker:
+    build:
+      context: ./worker
+    container_name: stream-movies-worker-local
+    env_file:
+      - .env.local
+    volumes:
+      - ./:/workspace
+      - ./generated_media:/workspace/generated_media
+      - ./movie_uploads:/workspace/movie_uploads
+    depends_on:
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: stream-movies-postgres-local
+    env_file:
+      - .env.local
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: stream-movies-redis-local
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    container_name: stream-movies-minio-local
+    command: server /data --console-address ":9001"
+    env_file:
+      - .env.local
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data_local:/data
+
+volumes:
+  postgres_data_local:
+  minio_data_local:
+  web_node_modules_local:

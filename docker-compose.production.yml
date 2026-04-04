@@ -1,0 +1,74 @@
+services:
+  api:
+    build:
+      context: ./api
+    container_name: stream-movies-api-production
+    env_file:
+      - .env.production
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_data_production:/workspace/data
+      - generated_media_production:/workspace/generated_media
+      - ./movie_uploads:/workspace/movie_uploads
+    depends_on:
+      - redis
+      - minio
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.production
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    container_name: stream-movies-web-production
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  worker:
+    build:
+      context: ./worker
+    container_name: stream-movies-worker-production
+    env_file:
+      - .env.production
+    volumes:
+      - app_data_production:/workspace/data
+      - generated_media_production:/workspace/generated_media
+      - ./movie_uploads:/workspace/movie_uploads
+    depends_on:
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: stream-movies-postgres-production
+    env_file:
+      - .env.production
+    volumes:
+      - postgres_data_production:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: stream-movies-redis-production
+
+  minio:
+    image: minio/minio:latest
+    container_name: stream-movies-minio-production
+    command: server /data --console-address ":9001"
+    env_file:
+      - .env.production
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-replace-me}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-replace-me}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data_production:/data
+
+volumes:
+  app_data_production:
+  generated_media_production:
+  postgres_data_production:
+  minio_data_production:
