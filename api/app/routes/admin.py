@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..blob_storage import BlobStorageError, BlobStorageNotConfigured, upload_blob
 from ..db import get_db_session
 from ..dependencies import get_admin_user
 from ..media_library import scan_local_media
 from ..models import User
-from ..schemas import LocalMediaSyncResponse
+from ..schemas import BlobUploadResponse, LocalMediaSyncResponse
 from ..seed import sync_local_media
 
 
@@ -30,3 +31,30 @@ def sync_local_media_library(
         imported_movie_ids=imported_movie_ids,
         total_local_files=len(scan_local_media()),
     )
+
+
+@router.post("/blob/upload", response_model=BlobUploadResponse)
+async def upload_blob_asset(
+    blob_path: str = Form(...),
+    file: UploadFile = File(...),
+    overwrite: bool = Form(False),
+    _: User = Depends(get_admin_user),
+) -> BlobUploadResponse:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Select a file to upload")
+
+    try:
+        payload = upload_blob(
+            blob_name=blob_path,
+            data=file.file,
+            content_type=file.content_type,
+            overwrite=overwrite,
+        )
+    except BlobStorageNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except BlobStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        await file.close()
+
+    return BlobUploadResponse(**payload)

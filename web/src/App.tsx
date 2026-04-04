@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MovieGrid } from './components/MovieGrid'
 import { VideoPlayer } from './components/VideoPlayer'
-import type { AuthResponse, LocalMediaSyncResponse, Movie, PlaybackGrant, User } from './types'
+import type { AuthResponse, BlobUploadResponse, LocalMediaSyncResponse, Movie, PlaybackGrant, User } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 const TOKEN_STORAGE_KEY = 'stream-movies-access-token'
@@ -15,6 +15,10 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [username, setUsername] = useState('demo')
   const [password, setPassword] = useState('demo123')
+  const [blobPath, setBlobPath] = useState('')
+  const [blobFile, setBlobFile] = useState<File | null>(null)
+  const [overwriteBlob, setOverwriteBlob] = useState(false)
+  const [blobUploadMessage, setBlobUploadMessage] = useState<string | null>(null)
 
   async function loadLibrary(token: string) {
     const moviesResponse = await fetch(`${API_BASE_URL}/api/v1/catalog/movies`, {
@@ -107,6 +111,57 @@ export default function App() {
     }
   }
 
+  async function uploadBlobFile(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!authToken || !currentUser?.is_admin) {
+      setError('Only the curator account can upload files to production blob storage')
+      return
+    }
+
+    if (!blobFile) {
+      setError('Choose a file before uploading to blob storage')
+      return
+    }
+
+    if (!blobPath.trim()) {
+      setError('Enter a blob path such as hls/movie-id/master.m3u8')
+      return
+    }
+
+    setBlobUploadMessage(null)
+    setError(null)
+    setLoading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('blob_path', blobPath.trim())
+      formData.append('overwrite', String(overwriteBlob))
+      formData.append('file', blobFile)
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/blob/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { detail?: string }
+        throw new Error(payload.detail ?? 'Unable to upload file to blob storage')
+      }
+
+      const payload = (await response.json()) as BlobUploadResponse
+      setBlobUploadMessage(`Uploaded ${payload.blob_name} (${payload.size_bytes} bytes)`) 
+      setBlobFile(null)
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
@@ -193,9 +248,45 @@ export default function App() {
               <p><strong>Role:</strong> {currentUser.is_admin ? 'Curator' : 'Viewer'}</p>
               <p><strong>Username:</strong> {currentUser.username}</p>
               {currentUser.is_admin ? (
-                <button type="button" onClick={syncLocalMedia} disabled={loading}>
-                  Sync local videos
-                </button>
+                <div className="admin-actions">
+                  <button type="button" onClick={syncLocalMedia} disabled={loading}>
+                    Sync local videos
+                  </button>
+                  <form className="upload-form" onSubmit={uploadBlobFile}>
+                    <label htmlFor="blob-path">Production blob path</label>
+                    <input
+                      id="blob-path"
+                      value={blobPath}
+                      onChange={(event) => setBlobPath(event.target.value)}
+                      placeholder="hls/movie-id/master.m3u8"
+                    />
+                    <label htmlFor="blob-file">File</label>
+                    <input
+                      id="blob-file"
+                      type="file"
+                      onChange={(event) => {
+                        const nextFile = event.target.files?.[0] ?? null
+                        setBlobFile(nextFile)
+                        if (nextFile && !blobPath) {
+                          setBlobPath(`uploads/${nextFile.name}`)
+                        }
+                      }}
+                    />
+                    <label className="checkbox-row" htmlFor="overwrite-blob">
+                      <input
+                        id="overwrite-blob"
+                        type="checkbox"
+                        checked={overwriteBlob}
+                        onChange={(event) => setOverwriteBlob(event.target.checked)}
+                      />
+                      <span>Overwrite existing blob</span>
+                    </label>
+                    <button type="submit" disabled={loading}>
+                      Upload to blob
+                    </button>
+                    {blobUploadMessage ? <p className="helper-copy">{blobUploadMessage}</p> : null}
+                  </form>
+                </div>
               ) : null}
               <button type="button" onClick={logout}>Sign out</button>
             </>

@@ -59,3 +59,11 @@ class PlaybackGrantResponse(BaseModel):
 class LocalMediaSyncResponse(BaseModel):
     imported_movie_ids: list[str]
     total_local_files: int
+
+
+class BlobUploadResponse(BaseModel):
+    blob_name: str
+    url: str
+    content_type: str
+    size_bytes: int
+    overwritten: bool

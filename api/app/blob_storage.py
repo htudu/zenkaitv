@@ -16,18 +16,18 @@ class BlobStorageNotConfigured(BlobStorageError):
 def _load_blob_dependencies():
     try:
         from azure.identity import DefaultAzureCredential
-        from azure.storage.blob import BlobServiceClient
+        from azure.storage.blob import BlobServiceClient, ContentSettings
     except ImportError as exc:
         raise BlobStorageNotConfigured(
             "Azure Blob SDK dependencies are not installed in the API environment."
         ) from exc
 
-    return DefaultAzureCredential, BlobServiceClient
+    return DefaultAzureCredential, BlobServiceClient, ContentSettings
 
 
 def _get_container_client():
     settings = get_settings()
-    DefaultAzureCredential, BlobServiceClient = _load_blob_dependencies()
+    DefaultAzureCredential, BlobServiceClient, _ = _load_blob_dependencies()
 
     container_name = settings.azure_storage_container.strip()
     if not container_name:
@@ -58,6 +58,10 @@ def _normalize_relative_blob_path(relative_path: str) -> str:
         raise BlobStorageError("Blob asset path is invalid.")
 
     return "/".join(parts)
+
+
+def normalize_blob_name(blob_name: str) -> str:
+    return _normalize_relative_blob_path(blob_name)
 
 
 def build_hls_blob_name(movie_id: str, relative_path: str) -> str:
@@ -100,3 +104,32 @@ def stream_blob(blob_name: str):
         raise
     except Exception as exc:
         raise BlobStorageError(f"Unable to stream blob '{blob_name}': {exc}") from exc
+
+
+def upload_blob(blob_name: str, data, content_type: str | None = None, overwrite: bool = False) -> dict[str, str | int | bool]:
+    _, _, ContentSettings = _load_blob_dependencies()
+
+    safe_blob_name = normalize_blob_name(blob_name)
+    blob_client = _get_container_client().get_blob_client(safe_blob_name)
+
+    try:
+        if hasattr(data, "seek"):
+            data.seek(0)
+
+        upload_result = blob_client.upload_blob(
+            data,
+            overwrite=overwrite,
+            content_settings=ContentSettings(content_type=content_type or "application/octet-stream"),
+        )
+        size_bytes = getattr(upload_result, "size", 0) or 0
+        return {
+            "blob_name": safe_blob_name,
+            "url": blob_client.url,
+            "content_type": content_type or "application/octet-stream",
+            "size_bytes": int(size_bytes),
+            "overwritten": overwrite,
+        }
+    except BlobStorageNotConfigured:
+        raise
+    except Exception as exc:
+        raise BlobStorageError(f"Unable to upload blob '{safe_blob_name}': {exc}") from exc

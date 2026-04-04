@@ -150,6 +150,16 @@ The API looks for HLS assets in this blob naming pattern:
 
 Local imported videos still use the local `movie_uploads` and generated HLS path for development. Non-local movies can now switch to authenticated Blob-backed HLS if the manifest exists in the configured container.
 
+Curator accounts also now have a production Blob upload form in the web UI. It uploads a selected file to the configured Azure Blob container using the blob path you provide, for example:
+
+```text
+hls/movie-id/master.m3u8
+hls/movie-id/segment_000.ts
+uploads/trailer.mp4
+```
+
+This is an admin convenience for production storage management. It does not yet package a source MP4 into HLS automatically; it uploads the file exactly to the blob path you specify.
+
 ## Current Scope
 
 This repository currently provides the implementation foundation:

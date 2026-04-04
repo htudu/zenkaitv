@@ -105,6 +105,26 @@ p {
   gap: 10px;
 }
 
+.upload-form,
+.admin-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-actions {
+  margin: 14px 0;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
 .helper-copy {
   margin-top: 12px;
   color: rgba(246, 242, 234, 0.68);

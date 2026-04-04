@@ -36,3 +36,11 @@ export type LocalMediaSyncResponse = {
   imported_movie_ids: string[]
   total_local_files: number
 }
+
+export type BlobUploadResponse = {
+  blob_name: string
+  url: string
+  content_type: string
+  size_bytes: number
+  overwritten: boolean
+}
