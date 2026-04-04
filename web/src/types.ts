@@ -44,3 +44,11 @@ export type BlobUploadResponse = {
   size_bytes: number
   overwritten: boolean
 }
+
+export type SourceVideoUploadResponse = {
+  movie_id: string
+  source_blob_name: string
+  task_id: string
+  status: string
+  message: string
+}

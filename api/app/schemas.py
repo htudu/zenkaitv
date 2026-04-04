@@ -67,3 +67,11 @@ class BlobUploadResponse(BaseModel):
     content_type: str
     size_bytes: int
     overwritten: bool
+
+
+class SourceVideoUploadResponse(BaseModel):
+    movie_id: str
+    source_blob_name: str
+    task_id: str
+    status: str
+    message: str

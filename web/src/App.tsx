@@ -1,10 +1,25 @@
 import { useEffect, useState } from 'react'
 import { MovieGrid } from './components/MovieGrid'
 import { VideoPlayer } from './components/VideoPlayer'
-import type { AuthResponse, BlobUploadResponse, LocalMediaSyncResponse, Movie, PlaybackGrant, User } from './types'
+import type {
+  AuthResponse,
+  BlobUploadResponse,
+  LocalMediaSyncResponse,
+  Movie,
+  PlaybackGrant,
+  SourceVideoUploadResponse,
+  User,
+} from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 const TOKEN_STORAGE_KEY = 'stream-movies-access-token'
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
 
 export default function App() {
   const [movies, setMovies] = useState<Movie[]>([])
@@ -19,6 +34,13 @@ export default function App() {
   const [blobFile, setBlobFile] = useState<File | null>(null)
   const [overwriteBlob, setOverwriteBlob] = useState(false)
   const [blobUploadMessage, setBlobUploadMessage] = useState<string | null>(null)
+  const [sourceFile, setSourceFile] = useState<File | null>(null)
+  const [sourceMovieId, setSourceMovieId] = useState('')
+  const [sourceTitle, setSourceTitle] = useState('')
+  const [sourceYear, setSourceYear] = useState<string>(String(new Date().getFullYear()))
+  const [sourceSynopsis, setSourceSynopsis] = useState('Uploaded for worker-based HLS packaging into Azure Blob Storage.')
+  const [sourceGenres, setSourceGenres] = useState('Uploaded,Production')
+  const [sourceUploadMessage, setSourceUploadMessage] = useState<string | null>(null)
 
   async function loadLibrary(token: string) {
     const moviesResponse = await fetch(`${API_BASE_URL}/api/v1/catalog/movies`, {
@@ -162,6 +184,59 @@ export default function App() {
     }
   }
 
+  async function uploadSourceVideo(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!authToken || !currentUser?.is_admin) {
+      setError('Only the curator account can upload source videos for packaging')
+      return
+    }
+
+    if (!sourceFile) {
+      setError('Choose a source video file before starting packaging')
+      return
+    }
+
+    if (!sourceMovieId.trim() || !sourceTitle.trim()) {
+      setError('Movie ID and title are required for source uploads')
+      return
+    }
+
+    setSourceUploadMessage(null)
+    setError(null)
+    setLoading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('movie_id', sourceMovieId.trim())
+      formData.append('title', sourceTitle.trim())
+      formData.append('year', sourceYear.trim())
+      formData.append('synopsis', sourceSynopsis.trim())
+      formData.append('genres', sourceGenres.trim())
+      formData.append('file', sourceFile)
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/source-video/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { detail?: string }
+        throw new Error(payload.detail ?? 'Unable to upload source video')
+      }
+
+      const payload = (await response.json()) as SourceVideoUploadResponse
+      setSourceUploadMessage(`Queued ${payload.movie_id} for packaging. Task: ${payload.task_id}`)
+      setSourceFile(null)
+      await loadLibrary(authToken)
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
@@ -285,6 +360,70 @@ export default function App() {
                       Upload to blob
                     </button>
                     {blobUploadMessage ? <p className="helper-copy">{blobUploadMessage}</p> : null}
+                  </form>
+                  <form className="upload-form" onSubmit={uploadSourceVideo}>
+                    <label htmlFor="source-title">Source video title</label>
+                    <input
+                      id="source-title"
+                      value={sourceTitle}
+                      onChange={(event) => {
+                        const nextTitle = event.target.value
+                        setSourceTitle(nextTitle)
+                        if (!sourceMovieId.trim()) {
+                          setSourceMovieId(slugify(nextTitle))
+                        }
+                      }}
+                      placeholder="Movie title"
+                    />
+                    <label htmlFor="source-movie-id">Movie ID</label>
+                    <input
+                      id="source-movie-id"
+                      value={sourceMovieId}
+                      onChange={(event) => setSourceMovieId(slugify(event.target.value))}
+                      placeholder="movie-id"
+                    />
+                    <label htmlFor="source-year">Release year</label>
+                    <input
+                      id="source-year"
+                      value={sourceYear}
+                      onChange={(event) => setSourceYear(event.target.value)}
+                      placeholder="2026"
+                    />
+                    <label htmlFor="source-genres">Genres</label>
+                    <input
+                      id="source-genres"
+                      value={sourceGenres}
+                      onChange={(event) => setSourceGenres(event.target.value)}
+                      placeholder="Drama,Production"
+                    />
+                    <label htmlFor="source-synopsis">Synopsis</label>
+                    <textarea
+                      id="source-synopsis"
+                      value={sourceSynopsis}
+                      onChange={(event) => setSourceSynopsis(event.target.value)}
+                      rows={3}
+                    />
+                    <label htmlFor="source-file">Source video file</label>
+                    <input
+                      id="source-file"
+                      type="file"
+                      accept="video/*"
+                      onChange={(event) => {
+                        const nextFile = event.target.files?.[0] ?? null
+                        setSourceFile(nextFile)
+                        if (nextFile && !sourceTitle) {
+                          const inferredTitle = nextFile.name.replace(/\.[^.]+$/, '')
+                          setSourceTitle(inferredTitle)
+                          if (!sourceMovieId.trim()) {
+                            setSourceMovieId(slugify(inferredTitle))
+                          }
+                        }
+                      }}
+                    />
+                    <button type="submit" disabled={loading}>
+                      Upload source and queue packaging
+                    </button>
+                    {sourceUploadMessage ? <p className="helper-copy">{sourceUploadMessage}</p> : null}
                   </form>
                 </div>
               ) : null}

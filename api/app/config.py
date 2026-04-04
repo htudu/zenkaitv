@@ -52,6 +52,7 @@ class Settings:
     azure_storage_container: str = ""
     azure_storage_connection_string: str = ""
     azure_storage_hls_prefix: str = "hls"
+    azure_storage_source_prefix: str = "source"
     ffmpeg_path: str | None = None
     api_cors_origins: list[str] | None = None
 
@@ -71,6 +72,7 @@ def get_settings() -> Settings:
         azure_storage_container=os.getenv("AZURE_STORAGE_CONTAINER", ""),
         azure_storage_connection_string=os.getenv("AZURE_STORAGE_CONNECTION_STRING", ""),
         azure_storage_hls_prefix=os.getenv("AZURE_STORAGE_HLS_PREFIX", "hls"),
+        azure_storage_source_prefix=os.getenv("AZURE_STORAGE_SOURCE_PREFIX", "source"),
         ffmpeg_path=os.getenv("FFMPEG_PATH") or _find_ffmpeg(),
         api_cors_origins=_parse_origins(os.getenv("API_CORS_ORIGINS")),
     )

@@ -75,6 +75,17 @@ def build_hls_blob_name(movie_id: str, relative_path: str) -> str:
     return f"{movie_id}/{safe_relative_path}"
 
 
+def build_source_blob_name(movie_id: str, file_name: str) -> str:
+    settings = get_settings()
+    safe_file_name = _normalize_relative_blob_path(file_name)
+    prefix = settings.azure_storage_source_prefix.strip().strip("/")
+
+    if prefix:
+        return f"{prefix}/{movie_id}/{safe_file_name}"
+
+    return f"{movie_id}/{safe_file_name}"
+
+
 def blob_hls_manifest_exists(movie_id: str) -> bool:
     blob_name = build_hls_blob_name(movie_id, "master.m3u8")
     try:

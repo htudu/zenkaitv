@@ -160,6 +160,16 @@ uploads/trailer.mp4
 
 This is an admin convenience for production storage management. It does not yet package a source MP4 into HLS automatically; it uploads the file exactly to the blob path you specify.
 
+The admin UI also now supports a source-video upload flow for production packaging. That flow:
+
+1. uploads the source file into Blob under `source/<movie_id>/...`
+2. creates or updates the movie record in the catalog
+3. queues a Celery worker job
+4. packages the source into HLS with `ffmpeg`
+5. uploads the generated HLS files into `hls/<movie_id>/...`
+
+The worker image now requires `ffmpeg`, and the API and worker both require Azure Blob access in the production environment.
+
 ## Current Scope
 
 This repository currently provides the implementation foundation:
