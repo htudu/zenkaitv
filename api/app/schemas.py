@@ -98,6 +98,11 @@ class PlaybackGrantRequest(BaseModel):
 class PlaybackGrantResponse(BaseModel):
     movie_id: str
     manifest_url: str
+    token: str
+    expires_at: datetime
+    delivery_notes: list[str] = Field(default_factory=list)
+    user_id: int
+    stream_type: str
 
 
 class ReactionRequest(BaseModel):

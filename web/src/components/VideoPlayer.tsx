@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 
 type VideoPlayerProps = {
   src: string
-  streamType: string
+  streamType?: string
 }
 
 export function VideoPlayer({ src, streamType }: VideoPlayerProps) {
@@ -21,7 +21,9 @@ export function VideoPlayer({ src, streamType }: VideoPlayerProps) {
       })
     }
 
-    if (streamType.startsWith('progressive-')) {
+    const resolvedStreamType = streamType ?? ''
+
+    if (resolvedStreamType.startsWith('progressive-')) {
       videoElement.src = src
       videoElement.load()
       tryAutoplay()
