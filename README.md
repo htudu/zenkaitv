@@ -31,6 +31,57 @@ Important detail:
 
 ## Quick Start
 
+### 0. Prepare a Linux VM for Docker
+
+For a fresh Ubuntu or Debian-style VM, the repository now includes [setup.sh](d:/work/web_apps/stream_movies_app/setup.sh) to install the host dependencies required to run the app in Docker containers locally on that VM.
+
+```bash
+sudo bash ./setup.sh
+```
+
+If you want the script to clone the repo onto the VM first, provide a repo URL and target directory:
+
+```bash
+sudo REPO_URL=https://github.com/htudu/zenkaitv.git INSTALL_DIR=/opt/zenkaitv bash ./setup.sh
+```
+
+The script installs:
+
+- Docker Engine
+- Docker Compose plugin
+- Docker Buildx plugin
+- `ffmpeg`
+- `git`, `curl`, `ca-certificates`, and `gnupg`
+
+If `.env.local` is missing and `.env.example` exists, the setup script also creates a starter local env file.
+
+After it finishes, log out and back in if you want to run Docker without `sudo`.
+
+For a one-command local startup on the VM, use [run-local.sh](d:/work/web_apps/stream_movies_app/run-local.sh):
+
+```bash
+./run-local.sh
+```
+
+That helper:
+
+- creates `.env.local` from `.env.example` when needed
+- builds the local images the first time
+- starts the local Docker stack
+
+For a one-command production deployment on the VM, use [run-production.sh](d:/work/web_apps/stream_movies_app/run-production.sh):
+
+```bash
+./run-production.sh
+```
+
+That helper:
+
+- checks that `.env.production` exists
+- rejects obvious placeholder production values
+- builds the production images
+- starts the production compose stack
+
 ### 1. Start everything with Docker Compose
 
 ```powershell
@@ -72,6 +123,12 @@ docker compose -f docker-compose.local.yml start
 
 ```powershell
 docker compose -f docker-compose.production.yml --env-file .env.production up --build -d
+```
+
+Equivalent helper script:
+
+```bash
+./run-production.sh
 ```
 
 This uses:
