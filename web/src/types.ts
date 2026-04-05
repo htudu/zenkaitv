@@ -45,6 +45,23 @@ export type BlobUploadResponse = {
   overwritten: boolean
 }
 
+export type BlobCatalogSyncResponse = {
+  scanned_blob_names: string[]
+  discovered_movie_ids: string[]
+  created_movie_ids: string[]
+  updated_movie_ids: string[]
+  total_blobs: number
+  movies: BlobCatalogSyncMovieResult[]
+}
+
+export type BlobCatalogSyncMovieResult = {
+  movie_id: string
+  title: string
+  status: string
+  metadata_found: boolean
+  blob_count: number
+}
+
 export type SourceVideoUploadResponse = {
   movie_id: string
   source_blob_name: string

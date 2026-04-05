@@ -1,20 +1,93 @@
 from datetime import UTC, datetime
+import json
+import re
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..blob_storage import BlobStorageError, BlobStorageNotConfigured, build_source_blob_name, upload_blob
+from ..blob_storage import BlobStorageError, BlobStorageNotConfigured, build_hls_blob_name, build_source_blob_name, list_blob_names, read_blob_text, upload_blob
 from ..celery_app import celery_app
+from ..config import get_settings
 from ..db import get_db_session
 from ..dependencies import get_admin_user
 from ..media_library import scan_local_media
 from ..models import Entitlement, Movie, User
-from ..schemas import BlobUploadResponse, LocalMediaSyncResponse, SourceVideoUploadResponse
+from ..schemas import BlobCatalogSyncMovieResult, BlobCatalogSyncResponse, BlobUploadResponse, LocalMediaSyncResponse, SourceVideoUploadResponse
 from ..seed import sync_local_media
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def _humanize_movie_id(movie_id: str) -> str:
+    cleaned = re.sub(r"[_-]+", " ", movie_id)
+    return re.sub(r"\s+", " ", cleaned).strip().title() or movie_id
+
+
+def _extract_blob_movie_ids(blob_names: list[str]) -> list[str]:
+    settings = get_settings()
+    prefixes = [
+        settings.azure_storage_hls_prefix.strip().strip("/"),
+        settings.azure_storage_source_prefix.strip().strip("/"),
+    ]
+    discovered: set[str] = set()
+
+    for blob_name in blob_names:
+        normalized_blob_name = blob_name.strip("/")
+        for prefix in prefixes:
+            if not prefix:
+                continue
+            prefix_with_separator = f"{prefix}/"
+            if not normalized_blob_name.startswith(prefix_with_separator):
+                continue
+
+            remainder = normalized_blob_name[len(prefix_with_separator):]
+            movie_id = remainder.split("/", 1)[0].strip()
+            if movie_id:
+                discovered.add(movie_id)
+            break
+
+    return sorted(discovered)
+
+
+def _list_relevant_blob_names() -> list[str]:
+    settings = get_settings()
+    prefixes = [
+        settings.azure_storage_hls_prefix.strip().strip("/"),
+        settings.azure_storage_source_prefix.strip().strip("/"),
+    ]
+    collected: set[str] = set()
+
+    for prefix in prefixes:
+        if not prefix:
+            continue
+        collected.update(list_blob_names(prefix))
+
+    return sorted(collected)
+
+
+def _read_blob_movie_metadata(movie_id: str) -> tuple[dict[str, object] | None, bool]:
+    metadata_candidates = [
+        build_source_blob_name(movie_id, "metadata.json"),
+        build_hls_blob_name(movie_id, "metadata.json"),
+    ]
+
+    for blob_name in metadata_candidates:
+        try:
+            raw_text = read_blob_text(blob_name)
+        except BlobStorageError:
+            continue
+
+        try:
+            payload = json.loads(raw_text)
+        except json.JSONDecodeError as exc:
+            raise BlobStorageError(f"Blob metadata file '{blob_name}' is not valid JSON.") from exc
+
+        if isinstance(payload, dict):
+            return payload, True
+
+    return None, False
 
 
 @router.post("/local-media/sync", response_model=LocalMediaSyncResponse)
@@ -33,6 +106,108 @@ def sync_local_media_library(
     return LocalMediaSyncResponse(
         imported_movie_ids=imported_movie_ids,
         total_local_files=len(scan_local_media()),
+    )
+
+
+@router.post("/blob/sync-catalog", response_model=BlobCatalogSyncResponse)
+def sync_blob_catalog(
+    current_user: User = Depends(get_admin_user),
+    session: Session = Depends(get_db_session),
+) -> BlobCatalogSyncResponse:
+    try:
+        scanned_blob_names = _list_relevant_blob_names()
+    except BlobStorageNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except BlobStorageError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    discovered_movie_ids = _extract_blob_movie_ids(scanned_blob_names)
+    created_movie_ids: list[str] = []
+    updated_movie_ids: list[str] = []
+    movie_results: list[BlobCatalogSyncMovieResult] = []
+    current_year = datetime.now(UTC).year
+
+    demo_user = session.scalar(select(User).where(User.username == "demo"))
+    curator_user = session.scalar(select(User).where(User.username == "curator"))
+    entitled_user_ids = {current_user.id}
+    if demo_user is not None:
+        entitled_user_ids.add(demo_user.id)
+    if curator_user is not None:
+        entitled_user_ids.add(curator_user.id)
+
+    for movie_id in discovered_movie_ids:
+        metadata_payload, metadata_found = _read_blob_movie_metadata(movie_id)
+        related_blob_count = sum(1 for blob_name in scanned_blob_names if f"/{movie_id}/" in f"/{blob_name}")
+        resolved_title = _humanize_movie_id(movie_id)
+        resolved_year = current_year
+        resolved_duration_minutes = 0
+        resolved_synopsis = "Imported automatically from Azure Blob Storage during catalog sync."
+        resolved_poster_url = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80"
+        resolved_genres = "Blob Imported,Production"
+
+        if metadata_payload is not None:
+            resolved_title = str(metadata_payload.get("title") or resolved_title)
+            resolved_year = int(metadata_payload.get("year") or resolved_year)
+            resolved_duration_minutes = int(metadata_payload.get("duration_minutes") or resolved_duration_minutes)
+            resolved_synopsis = str(metadata_payload.get("synopsis") or resolved_synopsis)
+            resolved_poster_url = str(metadata_payload.get("poster_url") or resolved_poster_url)
+            genres_value = metadata_payload.get("genres")
+            if isinstance(genres_value, list):
+                resolved_genres = ",".join(str(item).strip() for item in genres_value if str(item).strip()) or resolved_genres
+            elif isinstance(genres_value, str) and genres_value.strip():
+                resolved_genres = genres_value.strip()
+
+        movie = session.get(Movie, movie_id)
+        if movie is None:
+            session.add(
+                Movie(
+                    id=movie_id,
+                    title=resolved_title,
+                    year=resolved_year,
+                    duration_minutes=resolved_duration_minutes,
+                    synopsis=resolved_synopsis,
+                    poster_url=resolved_poster_url,
+                    genres=resolved_genres,
+                )
+            )
+            created_movie_ids.append(movie_id)
+            status = "created"
+        else:
+            movie.title = resolved_title
+            movie.year = resolved_year
+            movie.duration_minutes = resolved_duration_minutes
+            movie.synopsis = resolved_synopsis
+            movie.poster_url = resolved_poster_url
+            movie.genres = resolved_genres
+            updated_movie_ids.append(movie_id)
+            status = "updated"
+
+        for user_id in entitled_user_ids:
+            existing_entitlement = session.scalar(
+                select(Entitlement).where(Entitlement.user_id == user_id, Entitlement.movie_id == movie_id)
+            )
+            if existing_entitlement is None:
+                session.add(Entitlement(user_id=user_id, movie_id=movie_id))
+
+        movie_results.append(
+            BlobCatalogSyncMovieResult(
+                movie_id=movie_id,
+                title=resolved_title,
+                status=status,
+                metadata_found=metadata_found,
+                blob_count=related_blob_count,
+            )
+        )
+
+    session.commit()
+
+    return BlobCatalogSyncResponse(
+        scanned_blob_names=scanned_blob_names,
+        discovered_movie_ids=discovered_movie_ids,
+        created_movie_ids=created_movie_ids,
+        updated_movie_ids=updated_movie_ids,
+        total_blobs=len(scanned_blob_names),
+        movies=movie_results,
     )
 
 

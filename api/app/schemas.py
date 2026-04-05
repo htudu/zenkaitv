@@ -69,6 +69,23 @@ class BlobUploadResponse(BaseModel):
     overwritten: bool
 
 
+class BlobCatalogSyncMovieResult(BaseModel):
+    movie_id: str
+    title: str
+    status: str
+    metadata_found: bool
+    blob_count: int
+
+
+class BlobCatalogSyncResponse(BaseModel):
+    scanned_blob_names: list[str]
+    discovered_movie_ids: list[str]
+    created_movie_ids: list[str]
+    updated_movie_ids: list[str]
+    total_blobs: int
+    movies: list[BlobCatalogSyncMovieResult]
+
+
 class SourceVideoUploadResponse(BaseModel):
     movie_id: str
     source_blob_name: str

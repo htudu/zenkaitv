@@ -144,3 +144,17 @@ def upload_blob(blob_name: str, data, content_type: str | None = None, overwrite
         raise
     except Exception as exc:
         raise BlobStorageError(f"Unable to upload blob '{safe_blob_name}': {exc}") from exc
+
+
+def list_blob_names(prefix: str | None = None) -> list[str]:
+    normalized_prefix = None
+    if prefix:
+        normalized_prefix = normalize_blob_name(prefix).rstrip("/") + "/"
+
+    try:
+        blob_items = _get_container_client().list_blobs(name_starts_with=normalized_prefix)
+        return sorted(blob_item.name for blob_item in blob_items)
+    except BlobStorageNotConfigured:
+        raise
+    except Exception as exc:
+        raise BlobStorageError("Unable to list blobs in the configured container.") from exc
