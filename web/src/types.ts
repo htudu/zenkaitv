@@ -16,6 +16,55 @@ export type User = {
   is_admin: boolean
 }
 
+export type AdminUserCreateRequest = {
+  username: string
+  full_name: string
+  password: string
+  is_admin: boolean
+}
+
+export type AdminUserUpdateRequest = {
+  username: string
+  full_name: string
+  password?: string
+  is_admin: boolean
+}
+
+export type AdminUserListResponse = {
+  items: User[]
+}
+
+export type AdminMovie = {
+  id: string
+  title: string
+  year: number
+  duration_minutes: number
+  synopsis: string
+  poster_url: string
+  genres: string[]
+  is_deleted: boolean
+  entitlement_count: number
+}
+
+export type AdminMovieListResponse = {
+  items: AdminMovie[]
+}
+
+export type AdminMovieUpdateRequest = {
+  title: string
+  year: number
+  duration_minutes: number
+  synopsis: string
+  poster_url: string
+  genres: string[]
+}
+
+export type AdminMovieVisibilityResponse = {
+  movie_id: string
+  is_deleted: boolean
+  message: string
+}
+
 export type AuthResponse = {
   access_token: string
   token_type: string

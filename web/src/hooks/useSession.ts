@@ -96,6 +96,7 @@ export function useSession({ onRequireHomeView }: UseSessionOptions) {
     loading,
     password,
     setError,
+    setCurrentUser,
     setIsUserPanelOpen,
     setLoading,
     setPassword,

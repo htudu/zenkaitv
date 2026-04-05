@@ -28,6 +28,7 @@ class Movie(Base):
     synopsis: Mapped[str] = mapped_column(Text)
     poster_url: Mapped[str] = mapped_column(Text)
     genres: Mapped[str] = mapped_column(String(255), default="")
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     entitlements: Mapped[list["Entitlement"]] = relationship(back_populates="movie", cascade="all, delete-orphan")
 

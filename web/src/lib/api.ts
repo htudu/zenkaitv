@@ -1,5 +1,12 @@
 import { API_BASE_URL } from './config'
 import type {
+  AdminMovie,
+  AdminMovieListResponse,
+  AdminMovieUpdateRequest,
+  AdminMovieVisibilityResponse,
+  AdminUserCreateRequest,
+  AdminUserListResponse,
+  AdminUserUpdateRequest,
   AuthResponse,
   BlobCatalogSyncResponse,
   BlobUploadResponse,
@@ -139,5 +146,104 @@ export async function uploadSourceVideoRequest(token: string, formData: FormData
       body: formData,
     },
     'Unable to upload source video',
+  )
+}
+
+export async function getAdminUsers(token: string) {
+  const payload = await request<AdminUserListResponse>(
+    '/api/v1/admin/users',
+    {
+      headers: buildAuthHeaders(token),
+    },
+    'Unable to load users',
+  )
+
+  return payload.items
+}
+
+export async function createAdminUser(token: string, payload: AdminUserCreateRequest) {
+  return request<User>(
+    '/api/v1/admin/users',
+    {
+      method: 'POST',
+      headers: buildAuthHeaders(token, {
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(payload),
+    },
+    'Unable to create user',
+  )
+}
+
+export async function updateAdminUser(token: string, userId: number, payload: AdminUserUpdateRequest) {
+  return request<User>(
+    `/api/v1/admin/users/${userId}`,
+    {
+      method: 'PUT',
+      headers: buildAuthHeaders(token, {
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(payload),
+    },
+    'Unable to update user',
+  )
+}
+
+export async function deleteAdminUser(token: string, userId: number) {
+  return request<User>(
+    `/api/v1/admin/users/${userId}`,
+    {
+      method: 'DELETE',
+      headers: buildAuthHeaders(token),
+    },
+    'Unable to delete user',
+  )
+}
+
+export async function getAdminMovies(token: string) {
+  const payload = await request<AdminMovieListResponse>(
+    '/api/v1/admin/movies',
+    {
+      headers: buildAuthHeaders(token),
+    },
+    'Unable to load movies',
+  )
+
+  return payload.items
+}
+
+export async function updateAdminMovie(token: string, movieId: string, payload: AdminMovieUpdateRequest) {
+  return request<AdminMovie>(
+    `/api/v1/admin/movies/${movieId}`,
+    {
+      method: 'PUT',
+      headers: buildAuthHeaders(token, {
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(payload),
+    },
+    'Unable to update movie',
+  )
+}
+
+export async function softDeleteAdminMovie(token: string, movieId: string) {
+  return request<AdminMovieVisibilityResponse>(
+    `/api/v1/admin/movies/${movieId}/soft-delete`,
+    {
+      method: 'POST',
+      headers: buildAuthHeaders(token),
+    },
+    'Unable to soft delete movie',
+  )
+}
+
+export async function restoreAdminMovie(token: string, movieId: string) {
+  return request<AdminMovieVisibilityResponse>(
+    `/api/v1/admin/movies/${movieId}/restore`,
+    {
+      method: 'POST',
+      headers: buildAuthHeaders(token),
+    },
+    'Unable to restore movie',
   )
 }

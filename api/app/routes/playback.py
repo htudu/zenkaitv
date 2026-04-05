@@ -26,6 +26,8 @@ def create_grant(
     movie = session.get(Movie, payload.movie_id)
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
+    if movie.is_deleted:
+        raise HTTPException(status_code=404, detail="Movie not found")
 
     entitlement = session.scalar(
         select(Entitlement).where(

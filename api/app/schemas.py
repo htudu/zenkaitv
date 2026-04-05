@@ -31,6 +31,55 @@ class UserSummary(BaseModel):
     is_admin: bool
 
 
+class AdminUserCreateRequest(BaseModel):
+    username: str
+    full_name: str
+    password: str
+    is_admin: bool = False
+
+
+class AdminUserUpdateRequest(BaseModel):
+    username: str
+    full_name: str
+    password: str | None = None
+    is_admin: bool
+
+
+class AdminUserListResponse(BaseModel):
+    items: list[UserSummary]
+
+
+class AdminMovieSummary(BaseModel):
+    id: str
+    title: str
+    year: int
+    duration_minutes: int
+    synopsis: str
+    poster_url: str
+    genres: list[str] = Field(default_factory=list)
+    is_deleted: bool
+    entitlement_count: int
+
+
+class AdminMovieListResponse(BaseModel):
+    items: list[AdminMovieSummary]
+
+
+class AdminMovieUpdateRequest(BaseModel):
+    title: str
+    year: int
+    duration_minutes: int
+    synopsis: str
+    poster_url: str
+    genres: list[str] = Field(default_factory=list)
+
+
+class AdminMovieVisibilityResponse(BaseModel):
+    movie_id: str
+    is_deleted: bool
+    message: str
+
+
 class AuthLoginRequest(BaseModel):
     username: str
     password: str

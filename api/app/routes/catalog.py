@@ -22,7 +22,7 @@ def list_movies(
     statement = (
         select(Movie)
         .join(Entitlement, Entitlement.movie_id == Movie.id)
-        .where(Entitlement.user_id == current_user.id)
+        .where(Entitlement.user_id == current_user.id, Movie.is_deleted.is_(False))
         .order_by(Movie.title.asc())
     )
     movies = session.scalars(statement).all()

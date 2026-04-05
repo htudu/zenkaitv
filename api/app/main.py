@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .db import engine, SessionLocal
+from .db import ensure_runtime_schema, engine, SessionLocal
 from .models import Base
 from .routes.admin import router as admin_router
 from .routes.auth import router as auth_router
@@ -21,6 +21,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
+    ensure_runtime_schema()
     with SessionLocal() as session:
         seed_database(session)
     yield
@@ -32,7 +33,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.api_cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 

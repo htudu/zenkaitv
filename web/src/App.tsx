@@ -2,15 +2,23 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { HomeView } from './features/home/HomeView'
 import {
+  createAdminUser,
+  deleteAdminUser,
+  getAdminMovies,
+  getAdminUsers,
+  restoreAdminMovie,
   syncBlobCatalogRequest,
   syncLocalMediaRequest,
+  updateAdminMovie,
+  updateAdminUser,
   uploadBlobFileRequest,
   uploadSourceVideoRequest,
+  softDeleteAdminMovie,
 } from './lib/api'
 import { usePlaybackCatalog } from './hooks/usePlaybackCatalog'
 import { useSession } from './hooks/useSession'
 import { slugify } from './lib/utils'
-import type { BlobCatalogSyncResponse } from './types'
+import type { AdminMovie, BlobCatalogSyncResponse, User } from './types'
 
 const AdminView = lazy(async () => import('./features/admin/AdminView').then((module) => ({ default: module.AdminView })))
 
@@ -28,6 +36,22 @@ export default function App() {
   const [sourceSynopsis, setSourceSynopsis] = useState('Uploaded for worker-based HLS packaging into Azure Blob Storage.')
   const [sourceGenres, setSourceGenres] = useState('Uploaded,Production')
   const [sourceUploadMessage, setSourceUploadMessage] = useState<string | null>(null)
+  const [adminUsers, setAdminUsers] = useState<User[]>([])
+  const [adminMovies, setAdminMovies] = useState<AdminMovie[]>([])
+  const [adminUserMessage, setAdminUserMessage] = useState<string | null>(null)
+  const [adminMovieMessage, setAdminMovieMessage] = useState<string | null>(null)
+  const [editingUserId, setEditingUserId] = useState<number | null>(null)
+  const [userFormUsername, setUserFormUsername] = useState('')
+  const [userFormFullName, setUserFormFullName] = useState('')
+  const [userFormPassword, setUserFormPassword] = useState('')
+  const [userFormIsAdmin, setUserFormIsAdmin] = useState(false)
+  const [editingMovieId, setEditingMovieId] = useState<string | null>(null)
+  const [movieFormTitle, setMovieFormTitle] = useState('')
+  const [movieFormYear, setMovieFormYear] = useState('')
+  const [movieFormDurationMinutes, setMovieFormDurationMinutes] = useState('0')
+  const [movieFormSynopsis, setMovieFormSynopsis] = useState('')
+  const [movieFormPosterUrl, setMovieFormPosterUrl] = useState('')
+  const [movieFormGenres, setMovieFormGenres] = useState('')
 
   const resetView = useCallback(() => {
     setActiveView('home')
@@ -41,6 +65,7 @@ export default function App() {
     loading,
     password,
     setError,
+    setCurrentUser,
     setIsUserPanelOpen,
     setLoading,
     setPassword,
@@ -65,6 +90,8 @@ export default function App() {
     onSessionExpired: logout,
   })
 
+  const isAdmin = Boolean(currentUser?.is_admin)
+
   useEffect(() => {
     if (!authToken) {
       resetLibrary()
@@ -86,6 +113,40 @@ export default function App() {
     }
   }, [activeView, currentUser])
 
+  useEffect(() => {
+    if (!authToken || !isAdmin || activeView !== 'admin') {
+      return
+    }
+
+    void refreshAdminData(authToken).catch((loadError) => {
+      setError(loadError instanceof Error ? loadError.message : 'Unknown error')
+    })
+  }, [activeView, authToken, isAdmin])
+
+  async function refreshAdminData(token: string) {
+    const [users, moviesPayload] = await Promise.all([getAdminUsers(token), getAdminMovies(token)])
+    setAdminUsers(users)
+    setAdminMovies(moviesPayload)
+  }
+
+  function resetUserForm() {
+    setEditingUserId(null)
+    setUserFormUsername('')
+    setUserFormFullName('')
+    setUserFormPassword('')
+    setUserFormIsAdmin(false)
+  }
+
+  function resetMovieForm() {
+    setEditingMovieId(null)
+    setMovieFormTitle('')
+    setMovieFormYear('')
+    setMovieFormDurationMinutes('0')
+    setMovieFormSynopsis('')
+    setMovieFormPosterUrl('')
+    setMovieFormGenres('')
+  }
+
   async function syncLocalMedia() {
     if (!authToken || !currentUser?.is_admin) {
       setError('Only the curator account can sync local media files')
@@ -105,6 +166,151 @@ export default function App() {
       )
     } catch (syncError) {
       setError(syncError instanceof Error ? syncError.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function submitAdminUser(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!authToken || !currentUser?.is_admin) {
+      setError('Only the curator account can manage users')
+      return
+    }
+
+    setAdminUserMessage(null)
+    setError(null)
+    setLoading(true)
+
+    try {
+      if (editingUserId === null) {
+        await createAdminUser(authToken, {
+          username: userFormUsername.trim(),
+          full_name: userFormFullName.trim(),
+          password: userFormPassword,
+          is_admin: userFormIsAdmin,
+        })
+        setAdminUserMessage('User created.')
+      } else {
+        const updatedUser = await updateAdminUser(authToken, editingUserId, {
+          username: userFormUsername.trim(),
+          full_name: userFormFullName.trim(),
+          password: userFormPassword.trim() ? userFormPassword : undefined,
+          is_admin: userFormIsAdmin,
+        })
+        if (currentUser.id === updatedUser.id) {
+          setCurrentUser(updatedUser)
+        }
+        setAdminUserMessage('User updated.')
+      }
+
+      await refreshAdminData(authToken)
+      resetUserForm()
+    } catch (userError) {
+      setError(userError instanceof Error ? userError.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function startEditingUser(user: User) {
+    setEditingUserId(user.id)
+    setUserFormUsername(user.username)
+    setUserFormFullName(user.full_name)
+    setUserFormPassword('')
+    setUserFormIsAdmin(user.is_admin)
+    setAdminUserMessage(null)
+  }
+
+  async function removeAdminUser(userId: number) {
+    if (!authToken || !currentUser?.is_admin) {
+      setError('Only the curator account can manage users')
+      return
+    }
+
+    setAdminUserMessage(null)
+    setError(null)
+    setLoading(true)
+
+    try {
+      await deleteAdminUser(authToken, userId)
+      await refreshAdminData(authToken)
+      if (editingUserId === userId) {
+        resetUserForm()
+      }
+      setAdminUserMessage('User deleted.')
+    } catch (userError) {
+      setError(userError instanceof Error ? userError.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function startEditingMovie(movie: AdminMovie) {
+    setEditingMovieId(movie.id)
+    setMovieFormTitle(movie.title)
+    setMovieFormYear(String(movie.year))
+    setMovieFormDurationMinutes(String(movie.duration_minutes))
+    setMovieFormSynopsis(movie.synopsis)
+    setMovieFormPosterUrl(movie.poster_url)
+    setMovieFormGenres(movie.genres.join(','))
+    setAdminMovieMessage(null)
+  }
+
+  async function submitAdminMovie(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!authToken || !currentUser?.is_admin || !editingMovieId) {
+      setError('Choose a movie before updating it')
+      return
+    }
+
+    setAdminMovieMessage(null)
+    setError(null)
+    setLoading(true)
+
+    try {
+      await updateAdminMovie(authToken, editingMovieId, {
+        title: movieFormTitle.trim(),
+        year: Number(movieFormYear),
+        duration_minutes: Number(movieFormDurationMinutes),
+        synopsis: movieFormSynopsis.trim(),
+        poster_url: movieFormPosterUrl.trim(),
+        genres: movieFormGenres.split(',').map((genre) => genre.trim()).filter(Boolean),
+      })
+      await refreshAdminData(authToken)
+      await refreshLibrary(authToken)
+      setAdminMovieMessage('Movie updated.')
+    } catch (movieError) {
+      setError(movieError instanceof Error ? movieError.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function toggleMovieDeleted(movie: AdminMovie) {
+    if (!authToken || !currentUser?.is_admin) {
+      setError('Only the curator account can manage movies')
+      return
+    }
+
+    setAdminMovieMessage(null)
+    setError(null)
+    setLoading(true)
+
+    try {
+      const payload = movie.is_deleted
+        ? await restoreAdminMovie(authToken, movie.id)
+        : await softDeleteAdminMovie(authToken, movie.id)
+      await refreshAdminData(authToken)
+      await refreshLibrary(authToken)
+      setAdminMovieMessage(payload.message)
+      if (editingMovieId === movie.id && !movie.is_deleted) {
+        resetMovieForm()
+      }
+    } catch (movieError) {
+      setError(movieError instanceof Error ? movieError.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
@@ -245,7 +451,6 @@ export default function App() {
   }
 
   const selectedMovie = selectedMovieId ? movies.find((movie) => movie.id === selectedMovieId) ?? null : null
-  const isAdmin = Boolean(currentUser?.is_admin)
 
   return (
     <div className="app-shell">
@@ -284,19 +489,53 @@ export default function App() {
             sourceTitle={sourceTitle}
             sourceUploadMessage={sourceUploadMessage}
             sourceYear={sourceYear}
+            adminMovieMessage={adminMovieMessage}
+            adminMovies={adminMovies}
+            adminUserMessage={adminUserMessage}
+            adminUsers={adminUsers}
+            editingMovieId={editingMovieId}
+            editingUserId={editingUserId}
+            movieFormDurationMinutes={movieFormDurationMinutes}
+            movieFormGenres={movieFormGenres}
+            movieFormPosterUrl={movieFormPosterUrl}
+            movieFormSynopsis={movieFormSynopsis}
+            movieFormTitle={movieFormTitle}
+            movieFormYear={movieFormYear}
             onBlobFileChange={handleBlobFileChange}
             onBlobPathChange={setBlobPath}
             onOverwriteBlobChange={setOverwriteBlob}
+            onResetMovieForm={resetMovieForm}
+            onResetUserForm={resetUserForm}
+            onSelectMovieForEdit={startEditingMovie}
+            onSelectUserForEdit={startEditingUser}
             onSourceFileChange={handleSourceFileChange}
             onSourceGenresChange={setSourceGenres}
             onSourceMovieIdChange={handleSourceMovieIdChange}
             onSourceSynopsisChange={setSourceSynopsis}
             onSourceTitleChange={handleSourceTitleChange}
             onSourceYearChange={setSourceYear}
+            onSubmitAdminMovie={submitAdminMovie}
+            onSubmitAdminUser={submitAdminUser}
             onSyncBlobCatalog={syncBlobCatalog}
             onSyncLocalMedia={syncLocalMedia}
+            onToggleMovieDeleted={toggleMovieDeleted}
             onUploadBlobFile={uploadBlobFile}
             onUploadSourceVideo={uploadSourceVideo}
+            onUserFormFullNameChange={setUserFormFullName}
+            onUserFormIsAdminChange={setUserFormIsAdmin}
+            onUserFormPasswordChange={setUserFormPassword}
+            onUserFormUsernameChange={setUserFormUsername}
+            onDeleteUser={removeAdminUser}
+            onMovieFormDurationMinutesChange={setMovieFormDurationMinutes}
+            onMovieFormGenresChange={setMovieFormGenres}
+            onMovieFormPosterUrlChange={setMovieFormPosterUrl}
+            onMovieFormSynopsisChange={setMovieFormSynopsis}
+            onMovieFormTitleChange={setMovieFormTitle}
+            onMovieFormYearChange={setMovieFormYear}
+            userFormFullName={userFormFullName}
+            userFormIsAdmin={userFormIsAdmin}
+            userFormPassword={userFormPassword}
+            userFormUsername={userFormUsername}
           />
         </Suspense>
       ) : (
