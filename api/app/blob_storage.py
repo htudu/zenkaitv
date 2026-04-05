@@ -1,6 +1,6 @@
 # pyright: reportMissingImports=false
 
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from .config import get_settings
 
@@ -107,14 +107,31 @@ def read_blob_text(blob_name: str, container_name: str | None = None) -> str:
     return payload.decode("utf-8")
 
 
-def stream_blob(blob_name: str):
+def stream_blob(blob_name: str, container_name: str | None = None):
     try:
-        downloader = _get_container_client().download_blob(blob_name)
+        downloader = _get_container_client(container_name).download_blob(blob_name)
         return downloader.chunks()
     except BlobStorageNotConfigured:
         raise
     except Exception as exc:
         raise BlobStorageError(f"Unable to stream blob '{blob_name}': {exc}") from exc
+
+
+def find_root_movie_blob_name(movie_id: str, container_name: str | None = None) -> str | None:
+    supported_extensions = {".mp4", ".m4v", ".mov", ".webm"}
+
+    for blob_name in list_blob_names(container_name=container_name):
+        if "/" in blob_name.strip("/"):
+            continue
+
+        suffix = Path(blob_name).suffix.lower()
+        if suffix not in supported_extensions:
+            continue
+
+        if Path(blob_name).stem == movie_id:
+            return blob_name
+
+    return None
 
 
 def upload_blob(blob_name: str, data, content_type: str | None = None, overwrite: bool = False) -> dict[str, str | int | bool]:

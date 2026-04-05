@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..blob_storage import BlobStorageError, BlobStorageNotConfigured, blob_hls_manifest_exists
+from ..blob_storage import BlobStorageError, BlobStorageNotConfigured, blob_hls_manifest_exists, find_root_movie_blob_name
 from ..db import get_db_session
 from ..dependencies import get_current_user
 from ..config import get_settings
@@ -90,6 +90,21 @@ def create_grant(
                     "This movie is served from Azure Blob Storage for production playback.",
                     "Playback is delivered as authenticated HLS assets proxied through the API.",
                     "Recommended next step is signed CDN delivery in front of the Blob origin.",
+                ],
+            )
+        root_blob_name = find_root_movie_blob_name(payload.movie_id, container_name=settings.azure_catalog_container)
+        if root_blob_name is not None:
+            return PlaybackGrantResponse(
+                movie_id=payload.movie_id,
+                manifest_url=f"/api/v1/media/blob-file/{payload.movie_id}?token={token}",
+                token=token,
+                expires_at=expires_at,
+                user_id=current_user.id,
+                stream_type="progressive-mp4",
+                delivery_notes=[
+                    "This movie is served from a root-level asset in the Azure Blob movies container.",
+                    f"Resolved blob asset: {root_blob_name}.",
+                    "Playback is delivered as an authenticated progressive file proxied through the API.",
                 ],
             )
         blob_delivery_note = "No Azure Blob HLS manifest was found for this title."

@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 import json
 import re
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
@@ -32,9 +33,17 @@ def _extract_blob_movie_ids(blob_names: list[str]) -> list[str]:
         settings.azure_storage_source_prefix.strip().strip("/"),
     ]
     discovered: set[str] = set()
+    root_video_extensions = {".mp4", ".m4v", ".mov", ".webm"}
 
     for blob_name in blob_names:
         normalized_blob_name = blob_name.strip("/")
+
+        if "/" not in normalized_blob_name:
+            blob_path = Path(normalized_blob_name)
+            if blob_path.suffix.lower() in root_video_extensions:
+                discovered.add(blob_path.stem)
+            continue
+
         for prefix in prefixes:
             if not prefix:
                 continue
@@ -52,23 +61,13 @@ def _extract_blob_movie_ids(blob_names: list[str]) -> list[str]:
 
 
 def _list_relevant_blob_names(container_name: str) -> list[str]:
-    settings = get_settings()
-    prefixes = [
-        settings.azure_storage_hls_prefix.strip().strip("/"),
-        settings.azure_storage_source_prefix.strip().strip("/"),
-    ]
-    collected: set[str] = set()
-
-    for prefix in prefixes:
-        if not prefix:
-            continue
-        collected.update(list_blob_names(prefix, container_name=container_name))
-
-    return sorted(collected)
+    return list_blob_names(container_name=container_name)
 
 
 def _read_blob_movie_metadata(movie_id: str, container_name: str) -> tuple[dict[str, object] | None, bool]:
     metadata_candidates = [
+        f"{movie_id}.metadata.json",
+        f"{movie_id}.json",
         build_source_blob_name(movie_id, "metadata.json"),
         build_hls_blob_name(movie_id, "metadata.json"),
     ]

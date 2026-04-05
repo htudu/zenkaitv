@@ -146,7 +146,7 @@ export function AdminView({
             id="blob-path"
             value={blobPath}
             onChange={(event) => onBlobPathChange(event.target.value)}
-            placeholder="hls/movie-id/master.m3u8"
+            placeholder="movie.mp4"
           />
           <label htmlFor="blob-file">File</label>
           <input

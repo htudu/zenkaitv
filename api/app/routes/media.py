@@ -4,7 +4,8 @@ from urllib.parse import quote
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 
-from ..blob_storage import BlobStorageError, build_hls_blob_name, read_blob_text, stream_blob
+from ..blob_storage import BlobStorageError, build_hls_blob_name, find_root_movie_blob_name, read_blob_text, stream_blob
+from ..config import get_settings
 from ..hls import get_hls_manifest_path
 from ..media_library import scan_local_media
 from ..security import decode_playback_token
@@ -111,3 +112,20 @@ def stream_blob_hls_asset(movie_id: str, asset_path: str, token: str = Query(...
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     return StreamingResponse(chunk_iterator, media_type=_blob_media_type(asset_path))
+
+
+@router.get("/blob-file/{movie_id}")
+def stream_root_blob_movie(movie_id: str, token: str = Query(...)) -> StreamingResponse:
+    _verify_playback_token(token, movie_id)
+
+    settings = get_settings()
+
+    try:
+        blob_name = find_root_movie_blob_name(movie_id, container_name=settings.azure_catalog_container)
+        if blob_name is None:
+            raise HTTPException(status_code=404, detail="Root-level blob movie not found")
+        chunk_iterator = stream_blob(blob_name, container_name=settings.azure_catalog_container)
+    except BlobStorageError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return StreamingResponse(chunk_iterator, media_type=_blob_media_type(blob_name))

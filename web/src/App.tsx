@@ -124,7 +124,7 @@ export default function App() {
     }
 
     if (!blobPath.trim()) {
-      setError('Enter a blob path such as hls/movie-id/master.m3u8')
+      setError('Enter a blob file name such as movie.mp4')
       return
     }
 
@@ -215,7 +215,7 @@ export default function App() {
     setBlobFile(file)
 
     if (file && !blobPath) {
-      setBlobPath(`uploads/${file.name}`)
+      setBlobPath(file.name)
     }
   }
 
