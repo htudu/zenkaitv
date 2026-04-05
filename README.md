@@ -82,6 +82,31 @@ That helper:
 - builds the production images
 - starts the production compose stack
 
+Production traffic now assumes a reverse proxy front door:
+
+- only ports `80` and `443` should be public on the VM
+- the proxy serves the frontend
+- `/api/*` is proxied privately to the FastAPI container
+- `api`, `minio`, and other backend services are no longer exposed directly to the internet
+
+Without a custom domain yet, set [/.env.production](d:/work/web_apps/stream_movies_app/.env.production) like this:
+
+```dotenv
+PUBLIC_SITE_ADDRESS=http://<vm-public-ip>
+API_CORS_ORIGINS=http://<vm-public-ip>
+VITE_API_BASE_URL=
+```
+
+Later, when you have a real domain, switch to:
+
+```dotenv
+PUBLIC_SITE_ADDRESS=your-domain.example
+API_CORS_ORIGINS=https://your-domain.example
+VITE_API_BASE_URL=
+```
+
+With a real domain, the bundled Caddy proxy can obtain HTTPS certificates automatically on ports `80/443`.
+
 ### 1. Start everything with Docker Compose
 
 ```powershell
@@ -133,12 +158,13 @@ Equivalent helper script:
 
 This uses:
 
-- nginx-served production frontend image
+- Caddy reverse proxy on public `80/443`
+- nginx-served production frontend image behind the proxy
 - API container
 - worker container
 - Redis
 - MinIO
-- persistent named volumes for app data and generated media
+- persistent named volumes for app data, generated media, and Caddy state
 
 Stop it with:
 

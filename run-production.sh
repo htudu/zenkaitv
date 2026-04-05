@@ -34,14 +34,15 @@ assert_env_value() {
 
 assert_env_value "STREAM_SIGNING_SECRET"
 assert_env_value "POSTGRES_PASSWORD"
+assert_env_value "PUBLIC_SITE_ADDRESS"
 assert_env_value "API_CORS_ORIGINS"
-assert_env_value "VITE_API_BASE_URL"
 
 echo "Building and starting production stack..."
 docker compose -f docker-compose.production.yml --env-file .env.production up -d --build
 
 echo
 echo "Production stack started."
+echo "Public entrypoint: $(grep -E '^PUBLIC_SITE_ADDRESS=' .env.production | cut -d '=' -f 2-)"
 echo "Check containers with:"
 echo "  docker compose -f docker-compose.production.yml --env-file .env.production ps"
 echo
