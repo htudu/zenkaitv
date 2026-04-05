@@ -34,10 +34,18 @@ Important detail:
 ### 1. Start everything with Docker Compose
 
 ```powershell
-docker compose -f docker-compose.local.yml --env-file .env.local up --build -d
+docker compose -f docker-compose.local.yml --env-file .env.local up -d
 ```
 
 This is now the recommended local startup command.
+
+For the very first run only, build the app images once:
+
+```powershell
+docker compose -f docker-compose.local.yml --env-file .env.local build api worker web
+```
+
+After that, the local stack uses bind mounts for the project files, so normal code edits do not require a rebuild. The API also runs with `--reload`, so Python changes are picked up automatically.
 
 This starts:
 
@@ -52,6 +60,12 @@ To stop the stack:
 
 ```powershell
 docker compose -f docker-compose.local.yml down
+```
+
+If you want the fastest restart without recreating containers, use:
+
+```powershell
+docker compose -f docker-compose.local.yml start
 ```
 
 ### 1a. Production-style Compose run

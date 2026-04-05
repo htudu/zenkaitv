@@ -21,10 +21,22 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
+function getInitials(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
 export default function App() {
   const [movies, setMovies] = useState<Movie[]>([])
   const [selectedGrant, setSelectedGrant] = useState<PlaybackGrant | null>(null)
+  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null)
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [playbackLoading, setPlaybackLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [authToken, setAuthToken] = useState<string>(() => localStorage.getItem(TOKEN_STORAGE_KEY) ?? '')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -64,12 +76,38 @@ export default function App() {
     if (!authToken) {
       setCurrentUser(null)
       setMovies([])
+      setSelectedMovieId(null)
       setSelectedGrant(null)
+      setIsUserPanelOpen(false)
       return
     }
 
     void bootstrapSession(authToken)
   }, [authToken])
+
+  useEffect(() => {
+    if (movies.length === 0) {
+      setSelectedMovieId(null)
+      setSelectedGrant(null)
+      return
+    }
+
+    const selectedMovieStillExists = selectedMovieId
+      ? movies.some((movie) => movie.id === selectedMovieId)
+      : false
+
+    if (!selectedMovieStillExists) {
+      setSelectedMovieId(movies[0].id)
+    }
+  }, [movies, selectedMovieId])
+
+  useEffect(() => {
+    if (!authToken || !selectedMovieId) {
+      return
+    }
+
+    void requestPlaybackGrant(selectedMovieId)
+  }, [authToken, selectedMovieId])
 
   async function bootstrapSession(token: string) {
     setLoading(true)
@@ -175,7 +213,7 @@ export default function App() {
       }
 
       const payload = (await response.json()) as BlobUploadResponse
-      setBlobUploadMessage(`Uploaded ${payload.blob_name} (${payload.size_bytes} bytes)`) 
+      setBlobUploadMessage(`Uploaded ${payload.blob_name} (${payload.size_bytes} bytes)`)
       setBlobFile(null)
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Unknown error')
@@ -271,7 +309,9 @@ export default function App() {
     setAuthToken('')
     setCurrentUser(null)
     setMovies([])
+    setSelectedMovieId(null)
     setSelectedGrant(null)
+    setIsUserPanelOpen(false)
   }
 
   async function requestPlaybackGrant(movieId: string) {
@@ -281,6 +321,7 @@ export default function App() {
     }
 
     setError(null)
+    setPlaybackLoading(true)
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/playback/grant`, {
@@ -301,194 +342,221 @@ export default function App() {
       setSelectedGrant(payload)
     } catch (grantError) {
       setError(grantError instanceof Error ? grantError.message : 'Unknown error')
+    } finally {
+      setPlaybackLoading(false)
     }
   }
 
+  const selectedMovie = selectedMovieId ? movies.find((movie) => movie.id === selectedMovieId) ?? null : null
+
   return (
     <div className="app-shell">
-      <header className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Private video platform foundation</p>
-          <h1>Stream licensed movies with an open-source-first stack.</h1>
-          <p className="hero-text">
-            This implementation now includes seeded users, persisted catalog data, entitlement-aware access,
-            and authenticated playback grants on top of the original UI and infrastructure scaffold.
-          </p>
+      <header className="app-nav">
+        <div className="nav-brand">
+          <p className="eyebrow">Private streaming platform</p>
+          <h1 className="brand-title">Priyanka TV</h1>
         </div>
-        <aside className="hero-panel">
-          {currentUser ? (
-            <>
-              <h2>Current session</h2>
-              <p><strong>User:</strong> {currentUser.full_name}</p>
-              <p><strong>Role:</strong> {currentUser.is_admin ? 'Curator' : 'Viewer'}</p>
-              <p><strong>Username:</strong> {currentUser.username}</p>
-              {currentUser.is_admin ? (
-                <div className="admin-actions">
-                  <button type="button" onClick={syncLocalMedia} disabled={loading}>
-                    Sync local videos
-                  </button>
-                  <form className="upload-form" onSubmit={uploadBlobFile}>
-                    <label htmlFor="blob-path">Production blob path</label>
-                    <input
-                      id="blob-path"
-                      value={blobPath}
-                      onChange={(event) => setBlobPath(event.target.value)}
-                      placeholder="hls/movie-id/master.m3u8"
-                    />
-                    <label htmlFor="blob-file">File</label>
-                    <input
-                      id="blob-file"
-                      type="file"
-                      onChange={(event) => {
-                        const nextFile = event.target.files?.[0] ?? null
-                        setBlobFile(nextFile)
-                        if (nextFile && !blobPath) {
-                          setBlobPath(`uploads/${nextFile.name}`)
-                        }
-                      }}
-                    />
-                    <label className="checkbox-row" htmlFor="overwrite-blob">
-                      <input
-                        id="overwrite-blob"
-                        type="checkbox"
-                        checked={overwriteBlob}
-                        onChange={(event) => setOverwriteBlob(event.target.checked)}
-                      />
-                      <span>Overwrite existing blob</span>
-                    </label>
-                    <button type="submit" disabled={loading}>
-                      Upload to blob
-                    </button>
-                    {blobUploadMessage ? <p className="helper-copy">{blobUploadMessage}</p> : null}
-                  </form>
-                  <form className="upload-form" onSubmit={uploadSourceVideo}>
-                    <label htmlFor="source-title">Source video title</label>
-                    <input
-                      id="source-title"
-                      value={sourceTitle}
-                      onChange={(event) => {
-                        const nextTitle = event.target.value
-                        setSourceTitle(nextTitle)
-                        if (!sourceMovieId.trim()) {
-                          setSourceMovieId(slugify(nextTitle))
-                        }
-                      }}
-                      placeholder="Movie title"
-                    />
-                    <label htmlFor="source-movie-id">Movie ID</label>
-                    <input
-                      id="source-movie-id"
-                      value={sourceMovieId}
-                      onChange={(event) => setSourceMovieId(slugify(event.target.value))}
-                      placeholder="movie-id"
-                    />
-                    <label htmlFor="source-year">Release year</label>
-                    <input
-                      id="source-year"
-                      value={sourceYear}
-                      onChange={(event) => setSourceYear(event.target.value)}
-                      placeholder="2026"
-                    />
-                    <label htmlFor="source-genres">Genres</label>
-                    <input
-                      id="source-genres"
-                      value={sourceGenres}
-                      onChange={(event) => setSourceGenres(event.target.value)}
-                      placeholder="Drama,Production"
-                    />
-                    <label htmlFor="source-synopsis">Synopsis</label>
-                    <textarea
-                      id="source-synopsis"
-                      value={sourceSynopsis}
-                      onChange={(event) => setSourceSynopsis(event.target.value)}
-                      rows={3}
-                    />
-                    <label htmlFor="source-file">Source video file</label>
-                    <input
-                      id="source-file"
-                      type="file"
-                      accept="video/*"
-                      onChange={(event) => {
-                        const nextFile = event.target.files?.[0] ?? null
-                        setSourceFile(nextFile)
-                        if (nextFile && !sourceTitle) {
-                          const inferredTitle = nextFile.name.replace(/\.[^.]+$/, '')
-                          setSourceTitle(inferredTitle)
-                          if (!sourceMovieId.trim()) {
-                            setSourceMovieId(slugify(inferredTitle))
-                          }
-                        }
-                      }}
-                    />
-                    <button type="submit" disabled={loading}>
-                      Upload source and queue packaging
-                    </button>
-                    {sourceUploadMessage ? <p className="helper-copy">{sourceUploadMessage}</p> : null}
-                  </form>
+
+        {currentUser ? (
+          <div className={`nav-user-menu${isUserPanelOpen ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="nav-user-panel"
+              aria-expanded={isUserPanelOpen}
+              aria-label="Toggle user menu"
+              onClick={() => setIsUserPanelOpen((currentValue) => !currentValue)}
+            >
+              <div className="nav-avatar" aria-hidden="true">{getInitials(currentUser.full_name)}</div>
+              <div className="nav-user-copy">
+                <p className="nav-user-name">{currentUser.full_name}</p>
+                <div className="nav-user-meta">
+                  <span>{currentUser.username}</span>
+                  <span>{currentUser.is_admin ? 'Curator' : 'Viewer'}</span>
                 </div>
-              ) : null}
-              <button type="button" onClick={logout}>Sign out</button>
-            </>
-          ) : (
-            <>
-              <h2>Demo login</h2>
-              <form className="login-form" onSubmit={login}>
-                <label htmlFor="username">Username</label>
-                <input id="username" value={username} onChange={(event) => setUsername(event.target.value)} />
-                <label htmlFor="password">Password</label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-                <button type="submit" disabled={loading}>Log in</button>
-              </form>
-              <p className="helper-copy">Try `demo / demo123` or `curator / curator123`.</p>
-            </>
-          )}
-        </aside>
+              </div>
+              <span className="nav-user-chevron" aria-hidden="true">{isUserPanelOpen ? '▴' : '▾'}</span>
+            </button>
+            {isUserPanelOpen ? (
+              <div className="nav-user-dropdown">
+                <p className="nav-user-dropdown-label">Signed in as {currentUser.username}</p>
+                <button type="button" className="nav-action nav-action-secondary nav-dropdown-action" onClick={logout}>
+                  Sign out
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <form className="nav-login-form" onSubmit={login}>
+            <input
+              id="username"
+              aria-label="Username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="Username"
+            />
+            <input
+              id="password"
+              aria-label="Password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Password"
+            />
+            <button type="submit" className="nav-action" disabled={loading}>Log in</button>
+          </form>
+        )}
       </header>
 
-      <main className="content-grid">
-        <section className="catalog-panel">
-          <div className="section-header">
-            <h2>Catalog</h2>
-            <span>{currentUser ? (loading ? 'Loading' : `${movies.length} entitled titles`) : 'Authentication required'}</span>
-          </div>
-          {error ? <p className="error-banner">{error}</p> : null}
-          <MovieGrid movies={movies} loading={loading} onRequestPlayback={requestPlaybackGrant} />
-        </section>
+      {!currentUser ? <p className="helper-copy nav-helper">Try demo / demo123 or curator / curator123.</p> : null}
 
-        <section className="grant-panel">
-          <div className="section-header">
-            <h2>Playback grant</h2>
-            <span>{currentUser ? 'Authenticated grant flow' : 'Sign in first'}</span>
-          </div>
+      {error ? <p className="error-banner">{error}</p> : null}
 
-          {selectedGrant ? (
-            <div className="grant-card">
-              <p><strong>Movie:</strong> {selectedGrant.movie_id}</p>
-              <p><strong>User ID:</strong> {selectedGrant.user_id}</p>
-              <p><strong>Stream Type:</strong> {selectedGrant.stream_type}</p>
-              <p><strong>Expires:</strong> {new Date(selectedGrant.expires_at).toLocaleString()}</p>
-              <VideoPlayer src={`${API_BASE_URL}${selectedGrant.manifest_url}`} streamType={selectedGrant.stream_type} />
-              <label htmlFor="manifest-url">Manifest URL</label>
-              <textarea id="manifest-url" readOnly value={selectedGrant.manifest_url} rows={4} />
-              <label htmlFor="delivery-notes">Delivery notes</label>
-              <textarea
-                id="delivery-notes"
-                readOnly
-                value={selectedGrant.delivery_notes.join('\n')}
-                rows={6}
-              />
+      <main className="home-layout">
+        <section className="player-stage">
+          {selectedGrant && selectedMovie ? (
+            <div className="player-shell">
+              <div className="player-copy">
+                <p className="eyebrow">Now showing</p>
+                <h2>{selectedMovie.title}</h2>
+                <p className="player-summary">{selectedMovie.synopsis}</p>
+                <div className="player-facts">
+                  <span>{selectedMovie.year}</span>
+                  <span>{selectedMovie.duration_minutes} min</span>
+                  <span>{selectedGrant.stream_type}</span>
+                </div>
+              </div>
+              <div className="player-frame">
+                <VideoPlayer src={`${API_BASE_URL}${selectedGrant.manifest_url}`} streamType={selectedGrant.stream_type} />
+              </div>
             </div>
           ) : (
-            <div className="empty-state">
-              <p>{currentUser ? 'Select an entitled movie and request a playback grant.' : 'Log in to load your entitled library.'}</p>
+            <div className="empty-stage">
+              <p>{currentUser ? (playbackLoading ? 'Loading player...' : 'Choose a movie below to start playback.') : 'Log in to load the catalog.'}</p>
             </div>
           )}
         </section>
+
+        <section className="catalog-dock">
+          <div className="section-header compact-header">
+            <h2>Movie catalog</h2>
+            <span>{currentUser ? (loading ? 'Loading catalog' : `${movies.length} titles`) : 'Authentication required'}</span>
+          </div>
+          <MovieGrid
+            movies={movies}
+            loading={loading}
+            selectedMovieId={selectedMovieId}
+            onSelectMovie={setSelectedMovieId}
+          />
+        </section>
+
+        {currentUser?.is_admin ? (
+          <details className="admin-drawer">
+            <summary>Curator tools</summary>
+            <div className="admin-actions">
+              <button type="button" onClick={syncLocalMedia} disabled={loading}>
+                Sync local videos
+              </button>
+              <form className="upload-form" onSubmit={uploadBlobFile}>
+                <label htmlFor="blob-path">Production blob path</label>
+                <input
+                  id="blob-path"
+                  value={blobPath}
+                  onChange={(event) => setBlobPath(event.target.value)}
+                  placeholder="hls/movie-id/master.m3u8"
+                />
+                <label htmlFor="blob-file">File</label>
+                <input
+                  id="blob-file"
+                  type="file"
+                  onChange={(event) => {
+                    const nextFile = event.target.files?.[0] ?? null
+                    setBlobFile(nextFile)
+                    if (nextFile && !blobPath) {
+                      setBlobPath(`uploads/${nextFile.name}`)
+                    }
+                  }}
+                />
+                <label className="checkbox-row" htmlFor="overwrite-blob">
+                  <input
+                    id="overwrite-blob"
+                    type="checkbox"
+                    checked={overwriteBlob}
+                    onChange={(event) => setOverwriteBlob(event.target.checked)}
+                  />
+                  <span>Overwrite existing blob</span>
+                </label>
+                <button type="submit" disabled={loading}>
+                  Upload to blob
+                </button>
+                {blobUploadMessage ? <p className="helper-copy">{blobUploadMessage}</p> : null}
+              </form>
+              <form className="upload-form" onSubmit={uploadSourceVideo}>
+                <label htmlFor="source-title">Source video title</label>
+                <input
+                  id="source-title"
+                  value={sourceTitle}
+                  onChange={(event) => {
+                    const nextTitle = event.target.value
+                    setSourceTitle(nextTitle)
+                    if (!sourceMovieId.trim()) {
+                      setSourceMovieId(slugify(nextTitle))
+                    }
+                  }}
+                  placeholder="Movie title"
+                />
+                <label htmlFor="source-movie-id">Movie ID</label>
+                <input
+                  id="source-movie-id"
+                  value={sourceMovieId}
+                  onChange={(event) => setSourceMovieId(slugify(event.target.value))}
+                  placeholder="movie-id"
+                />
+                <label htmlFor="source-year">Release year</label>
+                <input
+                  id="source-year"
+                  value={sourceYear}
+                  onChange={(event) => setSourceYear(event.target.value)}
+                  placeholder="2026"
+                />
+                <label htmlFor="source-genres">Genres</label>
+                <input
+                  id="source-genres"
+                  value={sourceGenres}
+                  onChange={(event) => setSourceGenres(event.target.value)}
+                  placeholder="Drama,Production"
+                />
+                <label htmlFor="source-synopsis">Synopsis</label>
+                <textarea
+                  id="source-synopsis"
+                  value={sourceSynopsis}
+                  onChange={(event) => setSourceSynopsis(event.target.value)}
+                  rows={3}
+                />
+                <label htmlFor="source-file">Source video file</label>
+                <input
+                  id="source-file"
+                  type="file"
+                  accept="video/*"
+                  onChange={(event) => {
+                    const nextFile = event.target.files?.[0] ?? null
+                    setSourceFile(nextFile)
+                    if (nextFile && !sourceTitle) {
+                      const inferredTitle = nextFile.name.replace(/\.[^.]+$/, '')
+                      setSourceTitle(inferredTitle)
+                      if (!sourceMovieId.trim()) {
+                        setSourceMovieId(slugify(inferredTitle))
+                      }
+                    }
+                  }}
+                />
+                <button type="submit" disabled={loading}>
+                  Upload source and queue packaging
+                </button>
+                {sourceUploadMessage ? <p className="helper-copy">{sourceUploadMessage}</p> : null}
+              </form>
+            </div>
+          </details>
+        ) : null}
       </main>
     </div>
   )

@@ -3,12 +3,13 @@ services:
     build:
       context: ./api
     container_name: stream-movies-api-local
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     env_file:
       - .env.local
     ports:
       - "8000:8000"
     volumes:
-      - ./:/workspace
+      - ./api:/workspace/api
       - ./data:/workspace/data
       - ./movie_uploads:/workspace/movie_uploads
       - ./generated_media:/workspace/generated_media
@@ -21,10 +22,9 @@ services:
       context: ./web
       dockerfile: Dockerfile
     container_name: stream-movies-web-local
-    env_file:
-      - .env.local
     environment:
       CHOKIDAR_USEPOLLING: "true"
+      VITE_API_BASE_URL: ""
     ports:
       - "5173:5173"
     volumes:
@@ -40,7 +40,7 @@ services:
     env_file:
       - .env.local
     volumes:
-      - ./:/workspace
+      - ./worker:/workspace/worker
       - ./generated_media:/workspace/generated_media
       - ./movie_uploads:/workspace/movie_uploads
     depends_on:

@@ -15,13 +15,23 @@ export function VideoPlayer({ src, streamType }: VideoPlayerProps) {
       return
     }
 
+    const tryAutoplay = () => {
+      void videoElement.play().catch(() => {
+        // Browsers may block autoplay until the user interacts with the page.
+      })
+    }
+
     if (streamType === 'progressive-mp4') {
       videoElement.src = src
+      videoElement.load()
+      tryAutoplay()
       return
     }
 
     if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
       videoElement.src = src
+      videoElement.load()
+      tryAutoplay()
       return
     }
 
@@ -32,11 +42,12 @@ export function VideoPlayer({ src, streamType }: VideoPlayerProps) {
     const hls = new Hls()
     hls.loadSource(src)
     hls.attachMedia(videoElement)
+    hls.on(Hls.Events.MANIFEST_PARSED, tryAutoplay)
 
     return () => {
       hls.destroy()
     }
   }, [src, streamType])
 
-  return <video className="video-preview" controls preload="metadata" ref={videoRef} />
+  return <video autoPlay className="video-preview" controls playsInline preload="metadata" ref={videoRef} />
 }
