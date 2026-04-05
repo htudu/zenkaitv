@@ -50,6 +50,7 @@ class Settings:
     azure_storage_account_name: str = ""
     azure_storage_account_url: str = ""
     azure_storage_container: str = ""
+    azure_catalog_container: str = "movies"
     azure_storage_connection_string: str = ""
     azure_storage_hls_prefix: str = "hls"
     azure_storage_source_prefix: str = "source"
@@ -70,6 +71,7 @@ def get_settings() -> Settings:
         azure_storage_account_name=os.getenv("AZURE_STORAGE_ACCOUNT_NAME", ""),
         azure_storage_account_url=os.getenv("AZURE_STORAGE_ACCOUNT_URL", ""),
         azure_storage_container=os.getenv("AZURE_STORAGE_CONTAINER", ""),
+        azure_catalog_container=os.getenv("AZURE_CATALOG_CONTAINER", "movies"),
         azure_storage_connection_string=os.getenv("AZURE_STORAGE_CONNECTION_STRING", ""),
         azure_storage_hls_prefix=os.getenv("AZURE_STORAGE_HLS_PREFIX", "hls"),
         azure_storage_source_prefix=os.getenv("AZURE_STORAGE_SOURCE_PREFIX", "source"),

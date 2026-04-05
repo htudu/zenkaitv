@@ -25,12 +25,12 @@ def _load_blob_dependencies():
     return DefaultAzureCredential, BlobServiceClient, ContentSettings
 
 
-def _get_container_client():
+def _get_container_client(container_name: str | None = None):
     settings = get_settings()
     DefaultAzureCredential, BlobServiceClient, _ = _load_blob_dependencies()
 
-    container_name = settings.azure_storage_container.strip()
-    if not container_name:
+    resolved_container_name = (container_name or settings.azure_storage_container).strip()
+    if not resolved_container_name:
         raise BlobStorageNotConfigured("AZURE_STORAGE_CONTAINER is not configured.")
 
     connection_string = settings.azure_storage_connection_string.strip()
@@ -45,7 +45,7 @@ def _get_container_client():
             "Set AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_ACCOUNT_URL for production blob playback."
         )
 
-    return service_client.get_container_client(container_name)
+    return service_client.get_container_client(resolved_container_name)
 
 
 def _normalize_relative_blob_path(relative_path: str) -> str:
@@ -96,9 +96,9 @@ def blob_hls_manifest_exists(movie_id: str) -> bool:
         raise BlobStorageError(f"Unable to check blob manifest '{blob_name}': {exc}") from exc
 
 
-def read_blob_text(blob_name: str) -> str:
+def read_blob_text(blob_name: str, container_name: str | None = None) -> str:
     try:
-        payload = _get_container_client().download_blob(blob_name).readall()
+        payload = _get_container_client(container_name).download_blob(blob_name).readall()
     except BlobStorageNotConfigured:
         raise
     except Exception as exc:
@@ -146,13 +146,13 @@ def upload_blob(blob_name: str, data, content_type: str | None = None, overwrite
         raise BlobStorageError(f"Unable to upload blob '{safe_blob_name}': {exc}") from exc
 
 
-def list_blob_names(prefix: str | None = None) -> list[str]:
+def list_blob_names(prefix: str | None = None, container_name: str | None = None) -> list[str]:
     normalized_prefix = None
     if prefix:
         normalized_prefix = normalize_blob_name(prefix).rstrip("/") + "/"
 
     try:
-        blob_items = _get_container_client().list_blobs(name_starts_with=normalized_prefix)
+        blob_items = _get_container_client(container_name).list_blobs(name_starts_with=normalized_prefix)
         return sorted(blob_item.name for blob_item in blob_items)
     except BlobStorageNotConfigured:
         raise

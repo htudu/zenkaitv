@@ -1,0 +1,153 @@
+.upload-form,
+.admin-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-actions {
+  margin: 14px 0;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
+.sync-result-card {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+}
+
+.sync-result-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+  margin-top: 10px;
+}
+
+.sync-result-list span {
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(246, 242, 234, 0.8);
+  font-size: 0.85rem;
+}
+
+.sync-result-table {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sync-result-table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 110px 120px 70px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sync-result-table-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-result-table-head {
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+}
+
+.sync-result-details {
+  margin-top: 12px;
+}
+
+.sync-result-details summary {
+  cursor: pointer;
+  color: rgba(246, 242, 234, 0.86);
+}
+
+.admin-layout {
+  display: grid;
+  gap: 20px;
+}
+
+.admin-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 12, 18, 0.68);
+  backdrop-filter: blur(18px);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+  padding: 24px;
+}
+
+.admin-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.admin-hero h2 {
+  margin-bottom: 8px;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+}
+
+.admin-hero-copy {
+  margin: 0;
+  max-width: 64ch;
+}
+
+.admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-metric-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-metric-card strong {
+  font-size: clamp(1.6rem, 2vw, 2.2rem);
+}
+
+.admin-metric-card span {
+  color: rgba(246, 242, 234, 0.72);
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.admin-button-row {
+  grid-template-columns: repeat(2, minmax(0, 240px));
+  align-items: start;
+}
+
+.admin-panel-header {
+  margin-bottom: 8px;
+}
+
+.admin-panel .helper-copy {
+  margin-bottom: 0;
+}

@@ -86,21 +86,23 @@ export function AdminView({
       <section className="admin-panel">
         <div className="section-header compact-header">
           <h2>Catalog sync</h2>
-          <span>{loading ? 'Working...' : 'Run refresh actions as needed'}</span>
+          <span>{loading ? 'Working...' : 'Reads from the movies blob container'}</span>
         </div>
         <div className="admin-actions admin-button-row">
           <button type="button" onClick={onSyncLocalMedia} disabled={loading}>
             Sync local videos
           </button>
           <button type="button" onClick={onSyncBlobCatalog} disabled={loading}>
-            Sync blob catalog
+            Sync movies container
           </button>
         </div>
         {blobCatalogSyncResult ? (
           <div className="sync-result-card">
             <p>
-              Synced {blobCatalogSyncResult.total_blobs} blob(s), discovered {blobCatalogSyncResult.discovered_movie_ids.length} movie id(s),
-              created {blobCatalogSyncResult.created_movie_ids.length}, updated {blobCatalogSyncResult.updated_movie_ids.length}.
+              Synced container <strong>{blobCatalogSyncResult.container_name}</strong>: {blobCatalogSyncResult.total_blobs} blob(s), discovered {blobCatalogSyncResult.discovered_movie_ids.length} movie id(s), created {blobCatalogSyncResult.created_movie_ids.length}, updated {blobCatalogSyncResult.updated_movie_ids.length}.
+            </p>
+            <p className="helper-copy">
+              Refreshed tables: {blobCatalogSyncResult.updated_tables.join(', ')}. New entitlements: {blobCatalogSyncResult.entitlement_records_created}.
             </p>
             <p className="helper-copy">
               Movie ids: {blobCatalogSyncResult.discovered_movie_ids.length > 0 ? blobCatalogSyncResult.discovered_movie_ids.join(', ') : 'None'}

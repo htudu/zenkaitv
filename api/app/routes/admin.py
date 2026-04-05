@@ -51,7 +51,7 @@ def _extract_blob_movie_ids(blob_names: list[str]) -> list[str]:
     return sorted(discovered)
 
 
-def _list_relevant_blob_names() -> list[str]:
+def _list_relevant_blob_names(container_name: str) -> list[str]:
     settings = get_settings()
     prefixes = [
         settings.azure_storage_hls_prefix.strip().strip("/"),
@@ -62,12 +62,12 @@ def _list_relevant_blob_names() -> list[str]:
     for prefix in prefixes:
         if not prefix:
             continue
-        collected.update(list_blob_names(prefix))
+        collected.update(list_blob_names(prefix, container_name=container_name))
 
     return sorted(collected)
 
 
-def _read_blob_movie_metadata(movie_id: str) -> tuple[dict[str, object] | None, bool]:
+def _read_blob_movie_metadata(movie_id: str, container_name: str) -> tuple[dict[str, object] | None, bool]:
     metadata_candidates = [
         build_source_blob_name(movie_id, "metadata.json"),
         build_hls_blob_name(movie_id, "metadata.json"),
@@ -75,7 +75,7 @@ def _read_blob_movie_metadata(movie_id: str) -> tuple[dict[str, object] | None, 
 
     for blob_name in metadata_candidates:
         try:
-            raw_text = read_blob_text(blob_name)
+            raw_text = read_blob_text(blob_name, container_name=container_name)
         except BlobStorageError:
             continue
 
@@ -114,8 +114,11 @@ def sync_blob_catalog(
     current_user: User = Depends(get_admin_user),
     session: Session = Depends(get_db_session),
 ) -> BlobCatalogSyncResponse:
+    settings = get_settings()
+    catalog_container_name = settings.azure_catalog_container.strip() or "movies"
+
     try:
-        scanned_blob_names = _list_relevant_blob_names()
+        scanned_blob_names = _list_relevant_blob_names(catalog_container_name)
     except BlobStorageNotConfigured as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except BlobStorageError as exc:
@@ -125,6 +128,7 @@ def sync_blob_catalog(
     created_movie_ids: list[str] = []
     updated_movie_ids: list[str] = []
     movie_results: list[BlobCatalogSyncMovieResult] = []
+    entitlement_records_created = 0
     current_year = datetime.now(UTC).year
 
     demo_user = session.scalar(select(User).where(User.username == "demo"))
@@ -136,7 +140,7 @@ def sync_blob_catalog(
         entitled_user_ids.add(curator_user.id)
 
     for movie_id in discovered_movie_ids:
-        metadata_payload, metadata_found = _read_blob_movie_metadata(movie_id)
+        metadata_payload, metadata_found = _read_blob_movie_metadata(movie_id, catalog_container_name)
         related_blob_count = sum(1 for blob_name in scanned_blob_names if f"/{movie_id}/" in f"/{blob_name}")
         resolved_title = _humanize_movie_id(movie_id)
         resolved_year = current_year
@@ -188,6 +192,7 @@ def sync_blob_catalog(
             )
             if existing_entitlement is None:
                 session.add(Entitlement(user_id=user_id, movie_id=movie_id))
+                entitlement_records_created += 1
 
         movie_results.append(
             BlobCatalogSyncMovieResult(
@@ -202,10 +207,13 @@ def sync_blob_catalog(
     session.commit()
 
     return BlobCatalogSyncResponse(
+        container_name=catalog_container_name,
         scanned_blob_names=scanned_blob_names,
         discovered_movie_ids=discovered_movie_ids,
         created_movie_ids=created_movie_ids,
         updated_movie_ids=updated_movie_ids,
+        updated_tables=["movies", "entitlements", "catalog"],
+        entitlement_records_created=entitlement_records_created,
         total_blobs=len(scanned_blob_names),
         movies=movie_results,
     )

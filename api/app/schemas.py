@@ -78,10 +78,13 @@ class BlobCatalogSyncMovieResult(BaseModel):
 
 
 class BlobCatalogSyncResponse(BaseModel):
+    container_name: str
     scanned_blob_names: list[str]
     discovered_movie_ids: list[str]
     created_movie_ids: list[str]
     updated_movie_ids: list[str]
+    updated_tables: list[str]
+    entitlement_records_created: int
     total_blobs: int
     movies: list[BlobCatalogSyncMovieResult]
 

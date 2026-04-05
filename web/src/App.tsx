@@ -1,35 +1,21 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
-import { AdminView } from './features/admin/AdminView'
 import { HomeView } from './features/home/HomeView'
 import {
-  ApiRequestError,
-  createPlaybackGrant,
-  getCatalog,
-  getCurrentUser,
-  loginRequest,
   syncBlobCatalogRequest,
   syncLocalMediaRequest,
   uploadBlobFileRequest,
   uploadSourceVideoRequest,
 } from './lib/api'
-import { TOKEN_STORAGE_KEY } from './lib/config'
+import { usePlaybackCatalog } from './hooks/usePlaybackCatalog'
+import { useSession } from './hooks/useSession'
 import { slugify } from './lib/utils'
-import type { BlobCatalogSyncResponse, Movie, PlaybackGrant, User } from './types'
+import type { BlobCatalogSyncResponse } from './types'
+
+const AdminView = lazy(async () => import('./features/admin/AdminView').then((module) => ({ default: module.AdminView })))
 
 export default function App() {
-  const [movies, setMovies] = useState<Movie[]>([])
-  const [selectedGrant, setSelectedGrant] = useState<PlaybackGrant | null>(null)
-  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null)
   const [activeView, setActiveView] = useState<'home' | 'admin'>('home')
-  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [playbackLoading, setPlaybackLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [authToken, setAuthToken] = useState<string>(() => localStorage.getItem(TOKEN_STORAGE_KEY) ?? '')
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [username, setUsername] = useState('demo')
-  const [password, setPassword] = useState('demo123')
   const [blobPath, setBlobPath] = useState('')
   const [blobFile, setBlobFile] = useState<File | null>(null)
   const [overwriteBlob, setOverwriteBlob] = useState(false)
@@ -43,82 +29,62 @@ export default function App() {
   const [sourceGenres, setSourceGenres] = useState('Uploaded,Production')
   const [sourceUploadMessage, setSourceUploadMessage] = useState<string | null>(null)
 
-  async function loadLibrary(token: string) {
-    try {
-      setMovies(await getCatalog(token))
-    } catch (loadError) {
-      if (loadError instanceof ApiRequestError && loadError.status === 401) {
-        logout()
-        throw new Error('Your session expired. Log in again.')
-      }
+  const resetView = useCallback(() => {
+    setActiveView('home')
+  }, [])
 
-      throw loadError
-    }
-  }
+  const {
+    authToken,
+    currentUser,
+    error,
+    isUserPanelOpen,
+    loading,
+    password,
+    setError,
+    setIsUserPanelOpen,
+    setLoading,
+    setPassword,
+    setUsername,
+    username,
+    login,
+    logout,
+  } = useSession({
+    onRequireHomeView: resetView,
+  })
+
+  const {
+    movies,
+    playbackLoading,
+    refreshLibrary,
+    resetLibrary,
+    selectedGrant,
+    selectedMovieId,
+    setSelectedMovieId,
+  } = usePlaybackCatalog({
+    authToken,
+    onSessionExpired: logout,
+  })
 
   useEffect(() => {
     if (!authToken) {
-      setActiveView('home')
-      setCurrentUser(null)
-      setMovies([])
-      setSelectedMovieId(null)
-      setSelectedGrant(null)
-      setIsUserPanelOpen(false)
+      resetLibrary()
       return
     }
 
-    void bootstrapSession(authToken)
-  }, [authToken])
+    if (!currentUser) {
+      return
+    }
+
+    void refreshLibrary(authToken).catch((loadError) => {
+      setError(loadError instanceof Error ? loadError.message : 'Unknown error')
+    })
+  }, [authToken, currentUser, refreshLibrary, resetLibrary, setError])
 
   useEffect(() => {
     if (!currentUser?.is_admin && activeView === 'admin') {
       setActiveView('home')
     }
   }, [activeView, currentUser])
-
-  useEffect(() => {
-    if (movies.length === 0) {
-      setSelectedMovieId(null)
-      setSelectedGrant(null)
-      return
-    }
-
-    const selectedMovieStillExists = selectedMovieId
-      ? movies.some((movie) => movie.id === selectedMovieId)
-      : false
-
-    if (!selectedMovieStillExists) {
-      setSelectedMovieId(movies[0].id)
-    }
-  }, [movies, selectedMovieId])
-
-  useEffect(() => {
-    if (!authToken || !selectedMovieId) {
-      return
-    }
-
-    void requestPlaybackGrant(selectedMovieId)
-  }, [authToken, selectedMovieId])
-
-  async function bootstrapSession(token: string) {
-    setLoading(true)
-    setError(null)
-
-    try {
-      setCurrentUser(await getCurrentUser(token))
-      await loadLibrary(token)
-    } catch (loadError) {
-      if (loadError instanceof ApiRequestError && loadError.status === 401) {
-        logout()
-        setError('Your session expired. Log in again.')
-        return
-      }
-
-      setError(loadError instanceof Error ? loadError.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function syncLocalMedia() {
     if (!authToken || !currentUser?.is_admin) {
@@ -131,7 +97,7 @@ export default function App() {
 
     try {
       const payload = await syncLocalMediaRequest(authToken)
-      await loadLibrary(authToken)
+      await refreshLibrary(authToken)
       setError(
         payload.imported_movie_ids.length > 0
           ? `Imported ${payload.imported_movie_ids.length} new local video(s).`
@@ -195,7 +161,7 @@ export default function App() {
     try {
       const payload = await syncBlobCatalogRequest(authToken)
       setBlobCatalogSyncResult(payload)
-      await loadLibrary(authToken)
+      await refreshLibrary(authToken)
     } catch (syncError) {
       setError(syncError instanceof Error ? syncError.message : 'Unknown error')
     } finally {
@@ -237,56 +203,11 @@ export default function App() {
       const payload = await uploadSourceVideoRequest(authToken, formData)
       setSourceUploadMessage(`Queued ${payload.movie_id} for packaging. Task: ${payload.task_id}`)
       setSourceFile(null)
-      await loadLibrary(authToken)
+      await refreshLibrary(authToken)
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Unknown error')
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function login(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(null)
-    setLoading(true)
-
-    try {
-      const payload = await loginRequest(username, password)
-      localStorage.setItem(TOKEN_STORAGE_KEY, payload.access_token)
-      setAuthToken(payload.access_token)
-      setCurrentUser(payload.user)
-    } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function logout() {
-    localStorage.removeItem(TOKEN_STORAGE_KEY)
-    setAuthToken('')
-    setCurrentUser(null)
-    setMovies([])
-    setSelectedMovieId(null)
-    setSelectedGrant(null)
-    setIsUserPanelOpen(false)
-  }
-
-  async function requestPlaybackGrant(movieId: string) {
-    if (!authToken) {
-      setError('Log in before requesting a playback grant')
-      return
-    }
-
-    setError(null)
-    setPlaybackLoading(true)
-
-    try {
-      setSelectedGrant(await createPlaybackGrant(authToken, movieId))
-    } catch (grantError) {
-      setError(grantError instanceof Error ? grantError.message : 'Unknown error')
-    } finally {
-      setPlaybackLoading(false)
     }
   }
 
@@ -348,34 +269,36 @@ export default function App() {
       {error ? <p className="error-banner">{error}</p> : null}
 
       {activeView === 'admin' && isAdmin ? (
-        <AdminView
-          blobCatalogSyncResult={blobCatalogSyncResult}
-          blobFile={blobFile}
-          blobPath={blobPath}
-          blobUploadMessage={blobUploadMessage}
-          loading={loading}
-          movieCount={movies.length}
-          overwriteBlob={overwriteBlob}
-          sourceGenres={sourceGenres}
-          sourceMovieId={sourceMovieId}
-          sourceSynopsis={sourceSynopsis}
-          sourceTitle={sourceTitle}
-          sourceUploadMessage={sourceUploadMessage}
-          sourceYear={sourceYear}
-          onBlobFileChange={handleBlobFileChange}
-          onBlobPathChange={setBlobPath}
-          onOverwriteBlobChange={setOverwriteBlob}
-          onSourceFileChange={handleSourceFileChange}
-          onSourceGenresChange={setSourceGenres}
-          onSourceMovieIdChange={handleSourceMovieIdChange}
-          onSourceSynopsisChange={setSourceSynopsis}
-          onSourceTitleChange={handleSourceTitleChange}
-          onSourceYearChange={setSourceYear}
-          onSyncBlobCatalog={syncBlobCatalog}
-          onSyncLocalMedia={syncLocalMedia}
-          onUploadBlobFile={uploadBlobFile}
-          onUploadSourceVideo={uploadSourceVideo}
-        />
+        <Suspense fallback={<main className="admin-layout"><section className="admin-panel">Loading admin tools...</section></main>}>
+          <AdminView
+            blobCatalogSyncResult={blobCatalogSyncResult}
+            blobFile={blobFile}
+            blobPath={blobPath}
+            blobUploadMessage={blobUploadMessage}
+            loading={loading}
+            movieCount={movies.length}
+            overwriteBlob={overwriteBlob}
+            sourceGenres={sourceGenres}
+            sourceMovieId={sourceMovieId}
+            sourceSynopsis={sourceSynopsis}
+            sourceTitle={sourceTitle}
+            sourceUploadMessage={sourceUploadMessage}
+            sourceYear={sourceYear}
+            onBlobFileChange={handleBlobFileChange}
+            onBlobPathChange={setBlobPath}
+            onOverwriteBlobChange={setOverwriteBlob}
+            onSourceFileChange={handleSourceFileChange}
+            onSourceGenresChange={setSourceGenres}
+            onSourceMovieIdChange={handleSourceMovieIdChange}
+            onSourceSynopsisChange={setSourceSynopsis}
+            onSourceTitleChange={handleSourceTitleChange}
+            onSourceYearChange={setSourceYear}
+            onSyncBlobCatalog={syncBlobCatalog}
+            onSyncLocalMedia={syncLocalMedia}
+            onUploadBlobFile={uploadBlobFile}
+            onUploadSourceVideo={uploadSourceVideo}
+          />
+        </Suspense>
       ) : (
         <HomeView
           currentUserPresent={Boolean(currentUser)}

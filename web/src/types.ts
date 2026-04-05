@@ -46,10 +46,13 @@ export type BlobUploadResponse = {
 }
 
 export type BlobCatalogSyncResponse = {
+  container_name: string
   scanned_blob_names: string[]
   discovered_movie_ids: string[]
   created_movie_ids: string[]
   updated_movie_ids: string[]
+  updated_tables: string[]
+  entitlement_records_created: number
   total_blobs: number
   movies: BlobCatalogSyncMovieResult[]
 }
