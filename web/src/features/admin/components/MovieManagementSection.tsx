@@ -1,6 +1,7 @@
 import type { AdminMovie } from '../../../types'
 
 type MovieManagementSectionProps = {
+  mode: 'form' | 'list'
   adminMovieMessage: string | null
   adminMovies: AdminMovie[]
   editingMovieId: string | null
@@ -24,6 +25,7 @@ type MovieManagementSectionProps = {
 }
 
 export function MovieManagementSection({
+  mode,
   adminMovieMessage,
   adminMovies,
   editingMovieId,
@@ -47,11 +49,12 @@ export function MovieManagementSection({
 }: MovieManagementSectionProps) {
   return (
     <div className="admin-panel admin-management-panel">
-      <div className="section-header compact-header admin-panel-header">
-        <h2>Movie management</h2>
-        <span>{adminMovies.length} movie row(s)</span>
-      </div>
-      <form className="upload-form" onSubmit={onSubmitAdminMovie}>
+      {mode === 'form' && (
+        <>
+          <div className="section-header compact-header admin-panel-header">
+            <h2>Movie management</h2>
+          </div>
+          <form className="upload-form" onSubmit={onSubmitAdminMovie}>
         <label htmlFor="admin-movie-title">Title</label>
         <input
           id="admin-movie-title"
@@ -105,31 +108,42 @@ export function MovieManagementSection({
             Clear
           </button>
         </div>
-        {adminMovieMessage ? <p className="helper-copy">{adminMovieMessage}</p> : null}
-      </form>
-      <div className="admin-list-table">
-        <div className="admin-list-row admin-list-head admin-list-row-movie">
-          <span>Movie</span>
-          <span>Status</span>
-          <span>Entitlements</span>
-          <span>Actions</span>
-        </div>
-        {adminMovies.map((movie) => (
-          <div key={movie.id} className="admin-list-row admin-list-row-movie">
-            <span>{movie.title}</span>
-            <span>{movie.is_deleted ? 'Soft deleted' : 'Visible'}</span>
-            <span>{movie.entitlement_count}</span>
-            <span className="admin-row-actions">
-              <button type="button" className="admin-muted-button" onClick={() => onSelectMovieForEdit(movie)} disabled={loading}>
-                Edit
-              </button>
-              <button type="button" className={movie.is_deleted ? 'admin-muted-button' : 'admin-danger-button'} onClick={() => onToggleMovieDeleted(movie)} disabled={loading}>
-                {movie.is_deleted ? 'Restore' : 'Soft delete'}
-              </button>
-            </span>
+          {adminMovieMessage ? <p className="helper-copy">{adminMovieMessage}</p> : null}
+        </form>
+        </>
+      )}
+
+      {mode === 'list' && (
+        <>
+          <div className="section-header compact-header admin-panel-header">
+            <h2>Movie library</h2>
+            <span>{adminMovies.length} movie row(s)</span>
           </div>
-        ))}
-      </div>
+          <div className="admin-list-table">
+            <div className="admin-list-row admin-list-head admin-list-row-movie">
+              <span>Movie</span>
+              <span>Status</span>
+              <span>Entitlements</span>
+              <span>Actions</span>
+            </div>
+            {adminMovies.map((movie) => (
+              <div key={movie.id} className="admin-list-row admin-list-row-movie">
+                <span>{movie.title}</span>
+                <span>{movie.is_deleted ? 'Soft deleted' : 'Visible'}</span>
+                <span>{movie.entitlement_count}</span>
+                <span className="admin-row-actions">
+                  <button type="button" className="admin-muted-button" onClick={() => onSelectMovieForEdit(movie)} disabled={loading}>
+                    Edit
+                  </button>
+                  <button type="button" className={movie.is_deleted ? 'admin-muted-button' : 'admin-danger-button'} onClick={() => onToggleMovieDeleted(movie)} disabled={loading}>
+                    {movie.is_deleted ? 'Restore' : 'Soft delete'}
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

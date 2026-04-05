@@ -1,6 +1,7 @@
 import type { User } from '../../../types'
 
 type UserManagementSectionProps = {
+  mode: 'form' | 'list'
   adminUserMessage: string | null
   adminUsers: User[]
   editingUserId: number | null
@@ -20,6 +21,7 @@ type UserManagementSectionProps = {
 }
 
 export function UserManagementSection({
+  mode,
   adminUserMessage,
   adminUsers,
   editingUserId,
@@ -39,11 +41,12 @@ export function UserManagementSection({
 }: UserManagementSectionProps) {
   return (
     <div className="admin-panel admin-management-panel">
-      <div className="section-header compact-header admin-panel-header">
-        <h2>User management</h2>
-        <span>{adminUsers.length} user(s)</span>
-      </div>
-      <form className="upload-form" onSubmit={onSubmitAdminUser}>
+      {mode === 'form' && (
+        <>
+          <div className="section-header compact-header admin-panel-header">
+            <h2>User management</h2>
+          </div>
+          <form className="upload-form" onSubmit={onSubmitAdminUser}>
         <label htmlFor="admin-user-username">Username</label>
         <input
           id="admin-user-username"
@@ -83,29 +86,40 @@ export function UserManagementSection({
             Clear
           </button>
         </div>
-        {adminUserMessage ? <p className="helper-copy">{adminUserMessage}</p> : null}
-      </form>
-      <div className="admin-list-table">
-        <div className="admin-list-row admin-list-head">
-          <span>User</span>
-          <span>Role</span>
-          <span>Actions</span>
-        </div>
-        {adminUsers.map((user) => (
-          <div key={user.id} className="admin-list-row">
-            <span>{user.full_name} ({user.username})</span>
-            <span>{user.is_admin ? 'Admin' : 'Viewer'}</span>
-            <span className="admin-row-actions">
-              <button type="button" className="admin-muted-button" onClick={() => onSelectUserForEdit(user)} disabled={loading}>
-                Edit
-              </button>
-              <button type="button" className="admin-danger-button" onClick={() => onDeleteUser(user.id)} disabled={loading}>
-                Delete
-              </button>
-            </span>
+          {adminUserMessage ? <p className="helper-copy">{adminUserMessage}</p> : null}
+        </form>
+        </>
+      )}
+      
+      {mode === 'list' && (
+        <>
+          <div className="section-header compact-header admin-panel-header">
+            <h2>User directory</h2>
+            <span>{adminUsers.length} user(s)</span>
           </div>
-        ))}
-      </div>
+          <div className="admin-list-table">
+            <div className="admin-list-row admin-list-head">
+              <span>User</span>
+              <span>Role</span>
+              <span>Actions</span>
+            </div>
+            {adminUsers.map((user) => (
+              <div key={user.id} className="admin-list-row">
+                <span>{user.full_name} ({user.username})</span>
+                <span>{user.is_admin ? 'Admin' : 'Viewer'}</span>
+                <span className="admin-row-actions">
+                  <button type="button" className="admin-muted-button" onClick={() => onSelectUserForEdit(user)} disabled={loading}>
+                    Edit
+                  </button>
+                  <button type="button" className="admin-danger-button" onClick={() => onDeleteUser(user.id)} disabled={loading}>
+                    Delete
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

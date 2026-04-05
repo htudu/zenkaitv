@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
 :root {
   color-scheme: light;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
@@ -118,6 +120,18 @@ textarea {
   margin-bottom: 16px;
   color: #ffd2b6;
   background: rgba(168, 51, 13, 0.2);
+}
+
+.landing-tagline {
+  margin: 6px 0 18px;
+  padding: 0 6px;
+  color: rgba(246, 242, 234, 0.74);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(1.1rem, 2.2vw, 1.45rem);
+  font-style: italic;
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+  text-align: center;
 }
 
 .section-header {

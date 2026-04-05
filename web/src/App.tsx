@@ -457,19 +457,14 @@ export default function App() {
       <AppHeader
         activeView={activeView}
         currentUser={currentUser}
-        isLoading={loading}
-        isUserPanelOpen={isUserPanelOpen}
-        password={password}
-        username={username}
-        onLogin={login}
-        onLogout={logout}
-        onPasswordChange={setPassword}
-        onToggleUserPanel={() => setIsUserPanelOpen((currentValue) => !currentValue)}
-        onUsernameChange={setUsername}
         onViewChange={setActiveView}
       />
 
-      {!currentUser ? <p className="helper-copy nav-helper">Try demo / demo123 or curator / curator123.</p> : null}
+      {!currentUser ? (
+        <p id="landing-tagline" className="landing-tagline">
+          She arrives like moonlight on still water: impossible to ignore, precise in grace, and beautiful enough to make the whole night feel quieter.
+        </p>
+      ) : null}
 
       {error ? <p className="error-banner">{error}</p> : null}
 
@@ -482,6 +477,8 @@ export default function App() {
             blobUploadMessage={blobUploadMessage}
             loading={loading}
             movieCount={movies.length}
+            currentUser={currentUser!}
+            onLogout={logout}
             overwriteBlob={overwriteBlob}
             sourceGenres={sourceGenres}
             sourceMovieId={sourceMovieId}
@@ -540,14 +537,30 @@ export default function App() {
         </Suspense>
       ) : (
         <HomeView
+          currentUser={currentUser}
           currentUserPresent={Boolean(currentUser)}
+          isAdmin={isAdmin}
           loading={loading}
           movies={movies}
+          onLogin={login}
+          onLogout={logout}
+          onPasswordChange={setPassword}
+          onUseCuratorCredentials={() => {
+            setUsername('curator')
+            setPassword('curator123')
+          }}
+          onUseDemoCredentials={() => {
+            setUsername('demo')
+            setPassword('demo123')
+          }}
+          onUsernameChange={setUsername}
           playbackLoading={playbackLoading}
+          password={password}
           selectedGrant={selectedGrant}
           selectedMovie={selectedMovie}
           selectedMovieId={selectedMovieId}
           onSelectMovie={setSelectedMovieId}
+          username={username}
         />
       )}
     </div>

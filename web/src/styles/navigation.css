@@ -134,16 +134,6 @@
   font-size: 0.9rem;
 }
 
-.nav-login-form {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.nav-login-form input {
-  width: 180px;
-}
-
 .nav-action {
   width: auto;
   min-width: 110px;

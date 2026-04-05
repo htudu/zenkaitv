@@ -13,20 +13,26 @@
   .admin-grid {
     grid-template-columns: 1fr;
   }
+
+  .logged-out-hero,
+  .landing-footer,
+  .logged-out-note-band,
+  .landing-login-presets {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-footer-meta {
+    padding-left: 0;
+    padding-top: 16px;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
 }
 
 @media (max-width: 1024px) {
   .app-nav {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .nav-login-form {
-    flex-wrap: wrap;
-  }
-
-  .nav-login-form input {
-    width: 100%;
   }
 }
 
@@ -42,15 +48,21 @@
     padding: 18px;
   }
 
-  .nav-login-form {
-    width: 100%;
+  .curator-gateway {
     flex-direction: column;
     align-items: stretch;
+    padding: 18px;
   }
 
-  .nav-login-form input,
+  .logged-out-copy,
+  .landing-login-panel,
+  .landing-footer {
+    padding: 18px;
+  }
+
   .nav-action,
-  .nav-view-toggle {
+  .nav-view-toggle,
+  .curator-gateway-button {
     width: 100%;
   }
 
@@ -68,6 +80,10 @@
   .rail-arrow {
     display: none;
   }
+
+  .logged-out-title {
+    max-width: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -83,7 +99,7 @@
   }
 
   .nav-user-panel,
-  .nav-login-form {
+  .nav-user-panel {
     flex-direction: column;
     align-items: stretch;
   }
