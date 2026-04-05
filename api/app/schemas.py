@@ -102,12 +102,21 @@ class PlaybackGrantResponse(BaseModel):
 
 class ReactionRequest(BaseModel):
     emoji: str
+    note_message: str | None = None
 
 
 class ReactionResponse(BaseModel):
     note_id: str
     emoji: str | None = None
+    note_message: str | None = None
     created_at: str | None = None
+
+
+class ReactionListResponse(BaseModel):
+    items: list[ReactionResponse]
+    total: int
+    page: int
+    page_size: int
 
 
 class RandomNoteResponse(BaseModel):

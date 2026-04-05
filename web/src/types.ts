@@ -125,7 +125,15 @@ export type SourceVideoUploadResponse = {
 export type NoteReaction = {
   note_id: string
   emoji: string | null
+  note_message: string | null
   created_at: string | null
+}
+
+export type NoteReactionListResponse = {
+  items: NoteReaction[]
+  total: number
+  page: number
+  page_size: number
 }
 
 export type RandomNote = {

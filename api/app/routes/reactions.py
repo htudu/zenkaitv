@@ -22,7 +22,7 @@ def get_reaction(note_id: str, session: Session = Depends(get_db_session)):
     if reaction is None:
         return ReactionResponse(note_id=note_id)
 
-    return ReactionResponse(note_id=reaction.note_id, emoji=reaction.emoji, created_at=reaction.created_at)
+    return ReactionResponse(note_id=reaction.note_id, emoji=reaction.emoji, note_message=reaction.note_message, created_at=reaction.created_at)
 
 
 @router.put("/{note_id}", response_model=ReactionResponse)
@@ -32,16 +32,7 @@ def set_reaction(note_id: str, payload: ReactionRequest, session: Session = Depe
 
     now = datetime.now(timezone.utc).isoformat()
 
-    existing = session.scalar(
-        select(Reaction).where(Reaction.note_id == note_id).order_by(Reaction.id.desc()).limit(1)
-    )
-
-    if existing is not None:
-        existing.emoji = payload.emoji
-        existing.created_at = now
-    else:
-        session.add(Reaction(note_id=note_id, emoji=payload.emoji, created_at=now))
-
+    session.add(Reaction(note_id=note_id, emoji=payload.emoji, note_message=payload.note_message, created_at=now))
     session.commit()
 
-    return ReactionResponse(note_id=note_id, emoji=payload.emoji, created_at=now)
+    return ReactionResponse(note_id=note_id, emoji=payload.emoji, note_message=payload.note_message, created_at=now)

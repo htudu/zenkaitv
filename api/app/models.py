@@ -39,6 +39,7 @@ class Reaction(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     note_id: Mapped[str] = mapped_column(String(80), index=True)
     emoji: Mapped[str] = mapped_column(String(32))
+    note_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[str] = mapped_column(String(32))
 
 

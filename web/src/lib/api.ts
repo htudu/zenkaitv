@@ -13,6 +13,7 @@ import type {
   LocalMediaSyncResponse,
   Movie,
   NoteReaction,
+  NoteReactionListResponse,
   PlaybackGrant,
   RandomNote,
   SourceVideoUploadResponse,
@@ -163,6 +164,16 @@ export async function getAdminUsers(token: string) {
   return payload.items
 }
 
+export async function getAdminReactions(token: string, page = 1, pageSize = 20) {
+  return request<NoteReactionListResponse>(
+    `/api/v1/admin/reactions?page=${page}&page_size=${pageSize}`,
+    {
+      headers: buildAuthHeaders(token),
+    },
+    'Unable to load reactions',
+  )
+}
+
 export async function createAdminUser(token: string, payload: AdminUserCreateRequest) {
   return request<User>(
     '/api/v1/admin/users',
@@ -258,13 +269,13 @@ export async function getNoteReaction(noteId: string) {
   )
 }
 
-export async function setNoteReaction(noteId: string, emoji: string) {
+export async function setNoteReaction(noteId: string, emoji: string, noteMessage?: string) {
   return request<NoteReaction>(
     `/api/v1/reactions/${encodeURIComponent(noteId)}`,
     {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emoji }),
+      body: JSON.stringify({ emoji, note_message: noteMessage }),
     },
     'Unable to save reaction',
   )

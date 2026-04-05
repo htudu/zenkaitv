@@ -5,6 +5,7 @@ import { AdminHeroSection } from './components/AdminHeroSection'
 import { BlobUploadSection } from './components/BlobUploadSection'
 import { CatalogSyncSection } from './components/CatalogSyncSection'
 import { MovieManagementSection } from './components/MovieManagementSection'
+import { ReactionListSection } from './components/ReactionListSection'
 import { SourcePackagingSection } from './components/SourcePackagingSection'
 import { UserManagementSection } from './components/UserManagementSection'
 
@@ -35,6 +36,7 @@ type AdminViewProps = {
   sourceTitle: string
   sourceUploadMessage: string | null
   sourceYear: string
+  token: string
   onBlobFileChange: (file: File | null) => void
   onBlobPathChange: (value: string) => void
   onDeleteUser: (userId: number) => void
@@ -100,6 +102,7 @@ export function AdminView({
   sourceTitle,
   sourceUploadMessage,
   sourceYear,
+  token,
   onBlobFileChange,
   onBlobPathChange,
   onDeleteUser,
@@ -137,7 +140,7 @@ export function AdminView({
   userFormPassword,
   userFormUsername,
 }: AdminViewProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'movie-form' | 'movie-list' | 'pipeline' | 'user-form' | 'user-list'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'movie-form' | 'movie-list' | 'pipeline' | 'user-form' | 'user-list' | 'reactions'>('overview')
 
   return (
     <div className="admin-layout">
@@ -200,6 +203,14 @@ export function AdminView({
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             User Directory
+          </button>
+          <button 
+            type="button" 
+            className={`admin-nav-item ${activeTab === 'reactions' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reactions')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+            Reactions
           </button>
         </nav>
       </aside>
@@ -361,6 +372,12 @@ export function AdminView({
               userFormPassword={userFormPassword}
               userFormUsername={userFormUsername}
             />
+          </div>
+        )}
+
+        {activeTab === 'reactions' && (
+          <div className="admin-tab-pane">
+            <ReactionListSection token={token} />
           </div>
         )}
       </main>

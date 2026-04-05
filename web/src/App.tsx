@@ -484,6 +484,7 @@ export default function App() {
             sourceTitle={sourceTitle}
             sourceUploadMessage={sourceUploadMessage}
             sourceYear={sourceYear}
+            token={authToken!}
             adminMovieMessage={adminMovieMessage}
             adminMovies={adminMovies}
             adminUserMessage={adminUserMessage}

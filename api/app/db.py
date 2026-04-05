@@ -26,6 +26,9 @@ def ensure_runtime_schema() -> None:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE reactions ADD COLUMN note_id VARCHAR(80) NOT NULL DEFAULT 'priyanka-note'"))
                 connection.execute(text("CREATE INDEX IF NOT EXISTS ix_reactions_note_id ON reactions (note_id)"))
+        if "note_message" not in reaction_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE reactions ADD COLUMN note_message VARCHAR(500)"))
 
 
 def get_db_session() -> Generator[Session, None, None]:

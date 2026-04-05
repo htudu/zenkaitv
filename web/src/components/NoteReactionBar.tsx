@@ -5,7 +5,6 @@ const REACTIONS = [
   { emoji: '❤️', label: 'Love' },
   { emoji: '😂', label: 'Laugh' },
   { emoji: '😮', label: 'Wow' },
-  { emoji: '�', label: 'Fire' },
   { emoji: '👏', label: 'Clap' },
   { emoji: '🥰', label: 'Blush' },
   { emoji: '😳', label: 'Shy' },
@@ -16,7 +15,7 @@ const REACTIONS = [
   { emoji: '💔', label: 'Heartbreak' },
 ]
 
-export function NoteReactionBar({ noteId }: { noteId: string }) {
+export function NoteReactionBar({ noteId, noteMessage }: { noteId: string; noteMessage?: string }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -41,7 +40,7 @@ export function NoteReactionBar({ noteId }: { noteId: string }) {
 
     try {
       if (next) {
-        await setNoteReaction(noteId, next)
+        await setNoteReaction(noteId, next, noteMessage)
       }
     } catch {
       setSelected(selected)

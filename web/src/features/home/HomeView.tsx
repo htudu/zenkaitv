@@ -96,7 +96,7 @@ export function HomeView({
               <blockquote className="landing-note-quote">
                 {noteLoading ? '...' : (noteMessage ?? 'Click the button to reveal a note.')}
               </blockquote>
-              <NoteReactionBar noteId="priyanka-note" />
+              <NoteReactionBar noteId="priyanka-note" noteMessage={noteMessage ?? undefined} />
             </div>
           </div>
 
