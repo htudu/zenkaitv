@@ -87,7 +87,9 @@ Production traffic now assumes a reverse proxy front door:
 - only ports `80` and `443` should be public on the VM
 - the proxy serves the frontend
 - `/api/*` is proxied privately to the FastAPI container
-- `api`, `minio`, and other backend services are no longer exposed directly to the internet
+- `api`, `minio`, and other badocker compose -f docker-compose.local.yml --env-file .env.local logs -f api
+docker compose -f docker-compose.local.yml --env-file .env.local logs -f web
+docker compose -f docker-compose.local.yml --env-file .env.local logs -f workerckend services are no longer exposed directly to the internet
 
 Without a custom domain yet, set [/.env.production](d:/work/web_apps/stream_movies_app/.env.production) like this:
 

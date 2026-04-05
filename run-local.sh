@@ -20,6 +20,22 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+assert_local_env_value() {
+  local key="$1"
+  local value
+
+  value="$(grep -E "^${key}=" .env.local | head -n 1 | cut -d '=' -f 2- || true)"
+
+  if [[ -z "$value" ]]; then
+    echo "Missing required local setting: ${key}"
+    echo "Update .env.local before starting the local stack."
+    exit 1
+  fi
+}
+
+assert_local_env_value "DATABASE_URL"
+assert_local_env_value "STREAM_SIGNING_SECRET"
+
 if [[ -z "$(docker compose -f docker-compose.local.yml --env-file .env.local images -q api 2>/dev/null)" ]] \
   || [[ -z "$(docker compose -f docker-compose.local.yml --env-file .env.local images -q worker 2>/dev/null)" ]] \
   || [[ -z "$(docker compose -f docker-compose.local.yml --env-file .env.local images -q web 2>/dev/null)" ]]; then

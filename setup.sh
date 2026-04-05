@@ -47,8 +47,13 @@ if [[ -n "${TARGET_USER}" && "${TARGET_USER}" != "root" ]]; then
 fi
 
 if [[ ! -d "${INSTALL_DIR}/.git" && -n "${REPO_URL}" ]]; then
+  if [[ -e "${INSTALL_DIR}" && -n "$(find "${INSTALL_DIR}" -mindepth 1 -maxdepth 1 2>/dev/null)" ]]; then
+    echo "Refusing to clone into non-empty directory: ${INSTALL_DIR}"
+    echo "This avoids overwriting existing files such as .env.local or .env.production."
+    exit 1
+  fi
+
   echo "Cloning repository into ${INSTALL_DIR}..."
-  rm -rf "${INSTALL_DIR}"
   git clone "${REPO_URL}" "${INSTALL_DIR}"
 fi
 
