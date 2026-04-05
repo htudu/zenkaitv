@@ -8,6 +8,7 @@ from ...blob_storage import BlobStorageError, BlobStorageNotConfigured, build_so
 from ...celery_app import celery_app
 from ...db import get_db_session
 from ...dependencies import get_admin_user
+from ...media_library import guess_video_media_type
 from ...models import Entitlement, Movie, User
 from ...schemas import BlobUploadResponse, SourceVideoUploadResponse
 
@@ -73,7 +74,7 @@ async def upload_source_video(
         upload_blob(
             blob_name=source_blob_name,
             data=file.file,
-            content_type=file.content_type or 'video/mp4',
+            content_type=file.content_type or guess_video_media_type(file.filename),
             overwrite=overwrite,
         )
     except BlobStorageNotConfigured as exc:

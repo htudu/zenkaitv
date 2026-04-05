@@ -3,6 +3,7 @@
 from pathlib import Path, PurePosixPath
 
 from .config import get_settings
+from .media_library import SUPPORTED_VIDEO_EXTENSIONS
 
 
 class BlobStorageError(RuntimeError):
@@ -118,14 +119,12 @@ def stream_blob(blob_name: str, container_name: str | None = None):
 
 
 def find_root_movie_blob_name(movie_id: str, container_name: str | None = None) -> str | None:
-    supported_extensions = {".mp4", ".m4v", ".mov", ".webm"}
-
     for blob_name in list_blob_names(container_name=container_name):
         if "/" in blob_name.strip("/"):
             continue
 
         suffix = Path(blob_name).suffix.lower()
-        if suffix not in supported_extensions:
+        if suffix not in SUPPORTED_VIDEO_EXTENSIONS:
             continue
 
         if Path(blob_name).stem == movie_id:

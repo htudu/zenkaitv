@@ -21,7 +21,7 @@ export function VideoPlayer({ src, streamType }: VideoPlayerProps) {
       })
     }
 
-    if (streamType === 'progressive-mp4') {
+    if (streamType.startsWith('progressive-')) {
       videoElement.src = src
       videoElement.load()
       tryAutoplay()

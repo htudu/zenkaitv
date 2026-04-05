@@ -62,7 +62,7 @@ def create_grant(
                 ],
             )
         except HLSPackagingError as exc:
-            fallback_note = f"Falling back to direct MP4 because HLS packaging failed: {exc}"
+            fallback_note = f"Falling back to direct video file delivery because HLS packaging failed: {exc}"
 
         return PlaybackGrantResponse(
             movie_id=payload.movie_id,
@@ -70,10 +70,10 @@ def create_grant(
             token=token,
             expires_at=expires_at,
             user_id=current_user.id,
-            stream_type="progressive-mp4",
+            stream_type="progressive-file",
             delivery_notes=[
                 "This movie was imported from the local movie_uploads folder.",
-                "Playback is served directly as an authenticated MP4 for local testing.",
+                "Playback is served directly as an authenticated video file for local testing.",
                 fallback_note,
             ],
         )
@@ -102,11 +102,11 @@ def create_grant(
                 token=token,
                 expires_at=expires_at,
                 user_id=current_user.id,
-                stream_type="progressive-mp4",
+                stream_type="progressive-file",
                 delivery_notes=[
                     "This movie is served from a root-level asset in the Azure Blob movies container.",
                     f"Resolved blob asset: {root_blob_name}.",
-                    "Playback is delivered as an authenticated progressive file proxied through the API.",
+                    "Playback is delivered as an authenticated progressive video file proxied through the API.",
                 ],
             )
         blob_delivery_note = "No Azure Blob HLS manifest was found for this title."

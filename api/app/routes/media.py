@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from ..blob_storage import BlobStorageError, build_hls_blob_name, find_root_movie_blob_name, read_blob_text, stream_blob
 from ..config import get_settings
 from ..hls import get_hls_manifest_path
-from ..media_library import scan_local_media
+from ..media_library import guess_video_media_type, scan_local_media
 from ..security import decode_playback_token
 
 
@@ -28,14 +28,7 @@ def _rewrite_hls_manifest(movie_id: str, token: str, manifest_text: str, route_p
 
 
 def _blob_media_type(asset_name: str) -> str:
-    suffix = Path(asset_name).suffix.lower()
-    if suffix == ".m3u8":
-        return "application/vnd.apple.mpegurl"
-    if suffix == ".ts":
-        return "video/mp2t"
-    if suffix == ".mp4":
-        return "video/mp4"
-    return "application/octet-stream"
+    return guess_video_media_type(asset_name)
 
 
 def _verify_playback_token(token: str, movie_id: str) -> None:
@@ -54,7 +47,7 @@ def stream_local_movie(movie_id: str, token: str = Query(...)) -> FileResponse:
 
     _verify_playback_token(token, movie_id)
 
-    return FileResponse(path=media.file_path, media_type="video/mp4", filename=media.file_name)
+    return FileResponse(path=media.file_path, media_type=guess_video_media_type(media.file_name), filename=media.file_name)
 
 
 @router.get("/hls/{movie_id}/master.m3u8")

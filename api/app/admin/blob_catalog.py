@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ..blob_storage import BlobStorageError, build_hls_blob_name, build_source_blob_name, list_blob_names, read_blob_text
 from ..config import get_settings
+from ..media_library import SUPPORTED_VIDEO_EXTENSIONS
 
 
 def humanize_movie_id(movie_id: str) -> str:
@@ -19,14 +20,13 @@ def extract_blob_movie_ids(blob_names: list[str]) -> list[str]:
         settings.azure_storage_source_prefix.strip().strip('/'),
     ]
     discovered: set[str] = set()
-    root_video_extensions = {'.mp4', '.m4v', '.mov', '.webm'}
 
     for blob_name in blob_names:
         normalized_blob_name = blob_name.strip('/')
 
         if '/' not in normalized_blob_name:
             blob_path = Path(normalized_blob_name)
-            if blob_path.suffix.lower() in root_video_extensions:
+            if blob_path.suffix.lower() in SUPPORTED_VIDEO_EXTENSIONS:
                 discovered.add(blob_path.stem)
             continue
 

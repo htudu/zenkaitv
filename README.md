@@ -13,7 +13,7 @@ Open-source-first foundation for a private video-on-demand platform with a React
 
 ## Local Video Testing
 
-Drop MP4 files into [movie_uploads](d:/work/web_apps/stream_movies_app/movie_uploads). The service imports them into the catalog and, when `ffmpeg` is available, packages them into HLS on the first playback request. Generated manifests and segments are written to `generated_media/hls`.
+Drop supported video files such as MP4, M4V, MOV, WEBM, or MKV into [movie_uploads](d:/work/web_apps/stream_movies_app/movie_uploads). The service imports them into the catalog and, when `ffmpeg` is available, packages them into HLS on the first playback request. Generated manifests and segments are written to `generated_media/hls`.
 
 ## Environment Files
 
@@ -200,7 +200,7 @@ npm run dev
 
 ### 4a. Verify local playback
 
-1. Put MP4 files in [movie_uploads](d:/work/web_apps/stream_movies_app/movie_uploads)
+1. Put a supported video file such as MP4, M4V, MOV, WEBM, or MKV in [movie_uploads](d:/work/web_apps/stream_movies_app/movie_uploads)
 2. Start the API and web app
 3. Log in with `demo / demo123` or `curator / curator123`
 4. Request playback for one of the imported local titles
@@ -260,7 +260,7 @@ hls/movie-id/segment_000.ts
 uploads/trailer.mp4
 ```
 
-This is an admin convenience for production storage management. It does not yet package a source MP4 into HLS automatically; it uploads the file exactly to the blob path you specify.
+This is an admin convenience for production storage management. It does not package the uploaded file automatically; it uploads the file exactly to the blob path you specify.
 
 The admin UI also now supports a source-video upload flow for production packaging. That flow:
 
@@ -279,7 +279,7 @@ This repository currently provides the implementation foundation:
 - project documentation and architecture decisions
 - a starter API with sample catalog and playback grant endpoint
 - seeded demo users, entitlements, and login flow
-- automatic import of local MP4 files from `movie_uploads` for local browser playback tests
+- automatic import of supported local video files from `movie_uploads` for local browser playback tests
 - docker-compose startup for the full local stack
 - a starter frontend wired to the API
 - a worker scaffold for future transcoding tasks
