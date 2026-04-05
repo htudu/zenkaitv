@@ -20,6 +20,13 @@ def ensure_runtime_schema() -> None:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE movies ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0"))
 
+    if inspector.has_table("reactions"):
+        reaction_columns = {column["name"] for column in inspector.get_columns("reactions")}
+        if "note_id" not in reaction_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE reactions ADD COLUMN note_id VARCHAR(80) NOT NULL DEFAULT 'priyanka-note'"))
+                connection.execute(text("CREATE INDEX IF NOT EXISTS ix_reactions_note_id ON reactions (note_id)"))
+
 
 def get_db_session() -> Generator[Session, None, None]:
     session = SessionLocal()

@@ -1,6 +1,8 @@
 import { API_BASE_URL } from '../../lib/config'
 import { getInitials } from '../../lib/utils'
 import { MovieGrid } from '../../components/MovieGrid'
+import { NoteReactionBar } from '../../components/NoteReactionBar'
+import { TypewriterText } from '../../components/TypewriterText'
 import { VideoPlayer } from '../../components/VideoPlayer'
 import type { Movie, PlaybackGrant, User } from '../../types'
 
@@ -8,10 +10,14 @@ type HomeViewProps = {
   currentUser: User | null
   currentUserPresent: boolean
   isAdmin: boolean
+  isPriyankaNoteOpen: boolean
   loading: boolean
   movies: Movie[]
+  noteLoading: boolean
+  noteMessage: string | null
   onLogin: (event: React.FormEvent<HTMLFormElement>) => void
   onLogout: () => void
+  onNoteToggle: () => void
   onPasswordChange: (value: string) => void
   onUseCuratorCredentials: () => void
   onUseDemoCredentials: () => void
@@ -29,10 +35,14 @@ export function HomeView({
   currentUser,
   currentUserPresent,
   isAdmin,
+  isPriyankaNoteOpen,
   loading,
   movies,
+  noteLoading,
+  noteMessage,
   onLogin,
   onLogout,
+  onNoteToggle,
   onPasswordChange,
   onUseCuratorCredentials,
   onUseDemoCredentials,
@@ -50,25 +60,43 @@ export function HomeView({
       <main className="home-layout home-layout-logged-out">
         <section className="logged-out-hero">
           <div className="logged-out-copy">
-            <p className="eyebrow">Private screening room</p>
-            <h2 className="logged-out-title">A private cinema, designed to feel calm before the first frame.</h2>
-            <p className="logged-out-summary">
-              Keep the front page quiet, invite only the right viewers in, and move directly from sign-in to a curated playback experience without public catalog clutter.
-            </p>
-            <div className="logged-out-pill-row" aria-label="Platform highlights">
-              <span>Invite-only catalog</span>
-              <span>Private streaming</span>
-              <span>Curated access</span>
-            </div>
-            <div className="logged-out-note-band" aria-label="Landing page notes">
-              <div>
-                <strong>Minimal by default</strong>
-                <p>The landing page stays clean until a member signs in.</p>
-              </div>
-              <div>
-                <strong>Secure entry</strong>
-                <p>Playback and catalog visibility stay behind authenticated access.</p>
-              </div>
+            <p className="eyebrow logged-out-greeting">✦ For Priyanka</p>
+
+            <TypewriterText
+              id="landing-tagline"
+              className="landing-tagline"
+              sequence={[
+                'I left something here for you — a small note, tucked away, waiting to be found.',
+              ]}
+              speed={40}
+              pauseBetween={3000}
+            />
+
+            <div className="logged-out-divider" aria-hidden="true" />
+
+            <button
+              type="button"
+              className="landing-note-trigger"
+              aria-expanded={isPriyankaNoteOpen}
+              aria-controls="priyanka-note-panel"
+              onClick={onNoteToggle}
+            >
+              <span className="landing-note-trigger-icon" aria-hidden="true">
+                {isPriyankaNoteOpen ? '✕' : '✉'}
+              </span>
+              <span className="landing-note-trigger-text">
+                {isPriyankaNoteOpen ? 'Close note' : 'Open the note'}
+              </span>
+            </button>
+
+            <div
+              id="priyanka-note-panel"
+              className={`landing-note-panel ${isPriyankaNoteOpen ? 'landing-note-panel--visible' : ''}`}
+            >
+              <blockquote className="landing-note-quote">
+                {noteLoading ? '...' : (noteMessage ?? 'Click the button to reveal a note.')}
+              </blockquote>
+              <NoteReactionBar noteId="priyanka-note" />
             </div>
           </div>
 
@@ -125,7 +153,7 @@ export function HomeView({
             <p className="eyebrow landing-footer-eyebrow">Creator</p>
             <h3>Hambira Tudu</h3>
             <p className="landing-footer-manifesto">
-              Intelligent, deterministic, and disarmingly charming. The devil is the other name whispered in the margins: shadowed in aura, precise in intent, and unwavering in protecting the good and the innocent.
+              Quiet in approach, relentless in execution. He doesn't announce himself — he arrives with a sharp mind, calm hands, and a loyalty so fierce it looks dangerous from the outside. The gentleness is real. So is everything underneath it. Not the loudest, not the brightest light in the room — just the one still standing after every storm, precise, restless, and impossibly gentle with the things that matter.
             </p>
           </div>
           <div className="landing-footer-meta">

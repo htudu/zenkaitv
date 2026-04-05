@@ -6,6 +6,7 @@ import {
   deleteAdminUser,
   getAdminMovies,
   getAdminUsers,
+  getRandomNote,
   restoreAdminMovie,
   syncBlobCatalogRequest,
   syncLocalMediaRequest,
@@ -24,6 +25,9 @@ const AdminView = lazy(async () => import('./features/admin/AdminView').then((mo
 
 export default function App() {
   const [activeView, setActiveView] = useState<'home' | 'admin'>('home')
+  const [isPriyankaNoteOpen, setIsPriyankaNoteOpen] = useState(false)
+  const [noteMessage, setNoteMessage] = useState<string | null>(null)
+  const [noteLoading, setNoteLoading] = useState(false)
   const [blobPath, setBlobPath] = useState('')
   const [blobFile, setBlobFile] = useState<File | null>(null)
   const [overwriteBlob, setOverwriteBlob] = useState(false)
@@ -460,12 +464,6 @@ export default function App() {
         onViewChange={setActiveView}
       />
 
-      {!currentUser ? (
-        <p id="landing-tagline" className="landing-tagline">
-          She arrives like moonlight on still water: impossible to ignore, precise in grace, and beautiful enough to make the whole night feel quieter.
-        </p>
-      ) : null}
-
       {error ? <p className="error-banner">{error}</p> : null}
 
       {activeView === 'admin' && isAdmin ? (
@@ -540,10 +538,24 @@ export default function App() {
           currentUser={currentUser}
           currentUserPresent={Boolean(currentUser)}
           isAdmin={isAdmin}
+          isPriyankaNoteOpen={isPriyankaNoteOpen}
           loading={loading}
           movies={movies}
+          noteLoading={noteLoading}
+          noteMessage={noteMessage}
           onLogin={login}
           onLogout={logout}
+          onNoteToggle={() => {
+            const opening = !isPriyankaNoteOpen
+            setIsPriyankaNoteOpen(opening)
+            if (opening) {
+              setNoteLoading(true)
+              void getRandomNote()
+                .then((data) => setNoteMessage(data.note))
+                .catch(() => setNoteMessage('You are extraordinary — even when no words are enough to say it.'))
+                .finally(() => setNoteLoading(false))
+            }
+          }}
           onPasswordChange={setPassword}
           onUseCuratorCredentials={() => {
             setUsername('curator')

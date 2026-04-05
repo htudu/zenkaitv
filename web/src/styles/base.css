@@ -122,16 +122,307 @@ textarea {
   background: rgba(168, 51, 13, 0.2);
 }
 
+.landing-intro {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
 .landing-tagline {
-  margin: 6px 0 18px;
-  padding: 0 6px;
-  color: rgba(246, 242, 234, 0.74);
+  margin: 0;
+  padding: 0;
+  max-width: 50ch;
   font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: clamp(1.1rem, 2.2vw, 1.45rem);
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
   font-style: italic;
-  letter-spacing: 0.01em;
-  line-height: 1.45;
-  text-align: center;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  text-align: left;
+
+  background: linear-gradient(
+    110deg,
+    rgba(246, 242, 234, 0.3) 0%,
+    rgba(255, 255, 255, 0.95) 45%,
+    rgba(255, 255, 255, 0.95) 55%,
+    rgba(246, 242, 234, 0.3) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  animation: moonlightShimmer 7s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.2));
+}
+
+.landing-note-trigger {
+  width: auto;
+  min-width: 0;
+  padding: 12px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(246, 242, 234, 0.88);
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.landing-note-trigger-icon {
+  font-style: normal;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.landing-note-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(247, 165, 109, 0.25);
+  filter: none;
+}
+
+.landing-note-panel {
+  width: 100%;
+  max-width: none;
+  padding: 24px 28px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 12, 18, 0.5);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(16px);
+
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.4s ease,
+    transform 0.4s ease;
+  overflow: hidden;
+}
+
+.landing-note-panel > blockquote {
+  min-height: 0;
+  margin: 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid rgba(247, 165, 109, 0.35);
+}
+
+.landing-note-panel > .note-reactions {
+  min-height: 0;
+}
+
+.landing-note-panel--visible {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.landing-note-panel p,
+.landing-note-quote {
+  margin: 0;
+  text-align: left;
+  color: rgba(246, 242, 234, 0.82);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.18rem;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* ── Note Reactions (Teams / WhatsApp style) ── */
+
+.note-reactions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  min-height: 0;
+}
+
+.note-reaction-badge {
+  width: auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.note-reaction-badge--active {
+  height: 34px;
+  width: 34px;
+  background: rgba(247, 165, 109, 0.14);
+  border-color: rgba(247, 165, 109, 0.3);
+  box-shadow: 0 0 10px rgba(247, 165, 109, 0.1);
+  animation: reactionPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.note-reaction-badge--active:hover {
+  background: rgba(247, 165, 109, 0.22);
+  border-color: rgba(247, 165, 109, 0.45);
+  transform: scale(1.1);
+  filter: none;
+}
+
+.note-reaction-badge-emoji {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.note-reaction-add {
+  height: 32px;
+  width: 32px;
+  color: rgba(246, 242, 234, 0.4);
+}
+
+.note-reaction-add svg {
+  width: 15px;
+  height: 15px;
+}
+
+.note-reaction-add:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(246, 242, 234, 0.75);
+  transform: scale(1.1);
+  filter: none;
+}
+
+/* Picker tray — slides in like Teams reaction bar */
+.note-reaction-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(14, 18, 24, 0.92);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  animation: pickerSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.note-reaction-pick {
+  width: auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  line-height: 1;
+}
+
+.note-reaction-pick:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.35);
+  filter: none;
+}
+
+.note-reaction-pick--selected {
+  background: rgba(247, 165, 109, 0.18);
+}
+
+.note-reaction-pick--selected:hover {
+  background: rgba(247, 165, 109, 0.28);
+  filter: none;
+}
+
+.note-reaction-pick--close {
+  font-size: 0.7rem;
+  color: rgba(246, 242, 234, 0.35);
+  width: 28px;
+  height: 28px;
+  margin-left: 2px;
+}
+
+.note-reaction-pick--close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(246, 242, 234, 0.7);
+  transform: scale(1.1);
+  filter: none;
+}
+
+@keyframes reactionPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pickerSlideIn {
+  0% {
+    transform: scale(0.8) translateX(-8px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes moonlightShimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+.typewriter-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  -webkit-text-fill-color: initial;
+  color: #fff;
+  opacity: 1;
+  animation: blinkCursor 0.9s step-end infinite;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 400;
+  transform: translateY(-2px);
+}
+
+.typewriter-cursor.is-finished {
+  animation: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+.typewriter-fade-out {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.typewriter-fade-in {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+@keyframes blinkCursor {
+  50% { opacity: 0; }
 }
 
 .section-header {

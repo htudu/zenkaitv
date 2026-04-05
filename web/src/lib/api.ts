@@ -12,7 +12,9 @@ import type {
   BlobUploadResponse,
   LocalMediaSyncResponse,
   Movie,
+  NoteReaction,
   PlaybackGrant,
+  RandomNote,
   SourceVideoUploadResponse,
   User,
 } from '../types'
@@ -245,5 +247,33 @@ export async function restoreAdminMovie(token: string, movieId: string) {
       headers: buildAuthHeaders(token),
     },
     'Unable to restore movie',
+  )
+}
+
+export async function getNoteReaction(noteId: string) {
+  return request<NoteReaction>(
+    `/api/v1/reactions/${encodeURIComponent(noteId)}`,
+    {},
+    'Unable to load reaction',
+  )
+}
+
+export async function setNoteReaction(noteId: string, emoji: string) {
+  return request<NoteReaction>(
+    `/api/v1/reactions/${encodeURIComponent(noteId)}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emoji }),
+    },
+    'Unable to save reaction',
+  )
+}
+
+export async function getRandomNote() {
+  return request<RandomNote>(
+    '/api/v1/notes/random',
+    {},
+    'Unable to load note',
   )
 }

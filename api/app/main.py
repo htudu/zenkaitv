@@ -11,7 +11,9 @@ from .routes.auth import router as auth_router
 from .routes.catalog import router as catalog_router
 from .routes.health import router as health_router
 from .routes.media import router as media_router
+from .routes.notes import router as notes_router
 from .routes.playback import router as playback_router
+from .routes.reactions import router as reactions_router
 from .seed import seed_database
 
 
@@ -42,4 +44,6 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(catalog_router, prefix="/api/v1")
 app.include_router(media_router, prefix="/api/v1")
+app.include_router(notes_router, prefix="/api/v1")
 app.include_router(playback_router, prefix="/api/v1")
+app.include_router(reactions_router, prefix="/api/v1")

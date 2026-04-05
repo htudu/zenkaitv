@@ -121,3 +121,13 @@ export type SourceVideoUploadResponse = {
   status: string
   message: string
 }
+
+export type NoteReaction = {
+  note_id: string
+  emoji: string | null
+  created_at: string | null
+}
+
+export type RandomNote = {
+  note: string
+}

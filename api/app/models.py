@@ -33,6 +33,15 @@ class Movie(Base):
     entitlements: Mapped[list["Entitlement"]] = relationship(back_populates="movie", cascade="all, delete-orphan")
 
 
+class Reaction(Base):
+    __tablename__ = "reactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    note_id: Mapped[str] = mapped_column(String(80), index=True)
+    emoji: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[str] = mapped_column(String(32))
+
+
 class Entitlement(Base):
     __tablename__ = "entitlements"
     __table_args__ = (UniqueConstraint("user_id", "movie_id", name="uq_entitlements_user_movie"),)

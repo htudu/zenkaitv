@@ -98,11 +98,20 @@ class PlaybackGrantRequest(BaseModel):
 class PlaybackGrantResponse(BaseModel):
     movie_id: str
     manifest_url: str
-    token: str
-    expires_at: datetime
-    delivery_notes: list[str]
-    user_id: int
-    stream_type: str = "hls"
+
+
+class ReactionRequest(BaseModel):
+    emoji: str
+
+
+class ReactionResponse(BaseModel):
+    note_id: str
+    emoji: str | None = None
+    created_at: str | None = None
+
+
+class RandomNoteResponse(BaseModel):
+    note: str
 
 
 class LocalMediaSyncResponse(BaseModel):
